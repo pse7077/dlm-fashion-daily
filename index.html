@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="국내 패션 업계의 주요 뉴스를 날짜별로 모아보는 DLM Fashion Daily 아카이브">
+  <title>DLM Fashion Daily</title>
+  <style>
+    :root {
+      --ink: #101114;
+      --muted: #70737c;
+      --line: #e7e8eb;
+      --soft: #f3f4f6;
+      --blue: #3157ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: #fff;
+      font-family: Arial, "Noto Sans KR", sans-serif;
+    }
+    a { color: inherit; text-decoration: none; }
+    .wrap { width: min(1180px, calc(100% - 40px)); margin: 0 auto; }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-bottom: 1px solid rgba(231,232,235,.9);
+      background: rgba(255,255,255,.88);
+      backdrop-filter: blur(14px);
+    }
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 70px;
+    }
+    .brand {
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: -.045em;
+    }
+    .brand span { color: var(--blue); }
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .dot {
+      width: 7px;
+      height: 7px;
+      background: #20b26b;
+      border-radius: 50%;
+      box-shadow: 0 0 0 4px rgba(32,178,107,.11);
+    }
+    .status.stale { color: #d92d20; font-weight: 800; }
+    .status.stale .dot {
+      background: #d92d20;
+      box-shadow: 0 0 0 4px rgba(217,45,32,.12);
+    }
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(280px, .6fr);
+      gap: 50px;
+      padding: 84px 0 58px;
+      border-bottom: 1px solid var(--line);
+    }
+    .eyebrow {
+      margin-bottom: 18px;
+      color: var(--blue);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+    h1 {
+      max-width: 760px;
+      margin: 0;
+      font-size: clamp(48px, 7vw, 88px);
+      line-height: .95;
+      letter-spacing: -.075em;
+    }
+    .intro {
+      align-self: end;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.75;
+    }
+    .signals {
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) minmax(260px, .55fr);
+      gap: 12px;
+      padding: 0 0 16px;
+    }
+    .signal {
+      padding: 14px 18px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(250,250,250,.92);
+    }
+    .signal strong {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--blue);
+      font-size: 11px;
+      letter-spacing: .08em;
+    }
+    .signal span {
+      color: #30333a;
+      font-size: 14px;
+      line-height: 1.55;
+    }
+    .weather-strip {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(54px, 1fr));
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .weather-day {
+      min-height: 78px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      border-radius: 12px;
+      background: #f1f3f6;
+      color: #202226;
+      font-size: 12px;
+    }
+    .weather-day.today {
+      background: #e9edf3;
+      box-shadow: inset 0 0 0 1px rgba(49,87,255,.12);
+    }
+    .weather-icon {
+      font-size: 25px;
+      line-height: 1;
+    }
+    .weather-temp {
+      color: #4c5058;
+      font-size: 12px;
+    }
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 190px;
+      gap: 12px;
+      padding: 28px 0;
+    }
+    .field {
+      width: 100%;
+      min-height: 48px;
+      padding: 0 16px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      outline: 0;
+      background: var(--soft);
+      color: var(--ink);
+      font: inherit;
+    }
+    .field:focus { border-color: var(--blue); background: #fff; }
+    .section-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin: 30px 0 18px;
+    }
+    .section-head h2 { margin: 0; font-size: 24px; letter-spacing: -.04em; }
+    .count { color: var(--muted); font-size: 12px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+      padding-bottom: 80px;
+    }
+    .card {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: #fff;
+      transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+    }
+    .card:hover {
+      transform: translateY(-3px);
+      border-color: #c9ccd4;
+      box-shadow: 0 18px 44px rgba(16,17,20,.09);
+    }
+    .thumb { height: 240px; overflow: hidden; background: var(--soft); }
+    .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .card.no-image .content {
+      min-height: 260px;
+      display: flex;
+      flex-direction: column;
+    }
+    .card.no-image .content::before {
+      content: "Briefing";
+      width: fit-content;
+      margin-bottom: 34px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: var(--soft);
+      color: var(--blue);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .content { padding: 22px; }
+    .date { color: var(--blue); font-size: 10px; font-weight: 800; letter-spacing: .1em; }
+    .card h3 { margin: 11px 0 12px; font-size: 23px; line-height: 1.25; letter-spacing: -.035em; }
+    .card p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.7; }
+    .headline-list {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .headline-list li {
+      position: relative;
+      padding-left: 13px;
+      color: #484c55;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .headline-list li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: .62em;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--blue);
+    }
+    .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 18px; }
+    .tag { padding: 6px 9px; border-radius: 999px; background: var(--soft); color: #51545c; font-size: 10px; }
+    .empty {
+      display: none;
+      padding: 60px 20px 100px;
+      color: var(--muted);
+      text-align: center;
+    }
+    footer {
+      padding: 22px 0 34px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 10px;
+    }
+    @media (max-width: 760px) {
+      .wrap { width: min(100% - 28px, 1180px); }
+      .hero { grid-template-columns: 1fr; gap: 24px; padding: 54px 0 38px; }
+      h1 { font-size: clamp(46px, 15vw, 68px); }
+      .intro { max-width: 520px; }
+      .signals { grid-template-columns: 1fr; }
+      .weather-strip { grid-template-columns: repeat(4, minmax(58px, 1fr)); }
+      .controls { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr; }
+      .thumb { height: 58vw; min-height: 240px; max-height: 360px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap nav">
+      <a class="brand" href="./">DLM FASHION <span>DAILY</span></a>
+      <div class="status" id="update-status"><span class="dot"></span><span id="update-label">최종 업데이트 확인 중</span></div>
+    </div>
+    <section class="wrap signals" aria-label="주간 날씨와 환율">
+      <div class="signal">
+        <strong>WEEKLY WEATHER</strong>
+        <span id="weather-signal">서울 주간 날씨 정보를 불러오는 중입니다.</span>
+        <div class="weather-strip" id="weather-forecast" aria-label="7일 날씨 예보"></div>
+      </div>
+      <div class="signal">
+        <strong>FX CHECK</strong>
+        <span id="exchange-signal">USD/KRW 환율 정보를 불러오는 중입니다.</span>
+      </div>
+    </section>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <div>
+        <div class="eyebrow">Korea Fashion Industry Intelligence</div>
+        <h1>매일의 신호를<br>하나의 아카이브로.</h1>
+      </div>
+      <p class="intro">
+        국내 패션 업계의 브랜드, 유통, 투자, 플랫폼, 테크 소식을 선별합니다.
+        최신 브리핑을 읽고 날짜나 키워드로 지난 이슈를 다시 찾을 수 있습니다.
+      </p>
+    </section>
+
+    <section class="controls" aria-label="브리핑 검색">
+      <input class="field" id="search" type="search" placeholder="브랜드, 유통, 패션테크 등으로 검색">
+      <input class="field" id="month" type="month" aria-label="월 선택">
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>브리핑 아카이브</h2>
+        <span class="count" id="count"></span>
+      </div>
+      <div class="grid" id="archive"></div>
+      <div class="empty" id="empty">조건에 맞는 브리핑이 없습니다.</div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">DLM FASHION DAILY · 국내 패션 산업 모닝 브리핑</div>
+  </footer>
+
+  <script src="data/issues.js"></script>
+  <script src="data/signals.js"></script>
+  <script>
+    const archive = document.querySelector("#archive");
+    const search = document.querySelector("#search");
+    const month = document.querySelector("#month");
+    const count = document.querySelector("#count");
+    const empty = document.querySelector("#empty");
+    const status = document.querySelector("#update-status");
+    const updateLabel = document.querySelector("#update-label");
+    const weatherSignal = document.querySelector("#weather-signal");
+    const exchangeSignal = document.querySelector("#exchange-signal");
+    const weatherForecast = document.querySelector("#weather-forecast");
+
+    function toKstDate(date = new Date()) {
+      return new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Seoul",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(date);
+    }
+
+    function expectedUpdateDate() {
+      const now = new Date();
+      const kstHour = Number(new Intl.DateTimeFormat("en-US", {
+        timeZone: "Asia/Seoul",
+        hour: "2-digit",
+        hour12: false,
+      }).format(now));
+      const cursor = new Date(`${toKstDate(now)}T00:00:00+09:00`);
+      if (kstHour < 8) cursor.setDate(cursor.getDate() - 1);
+      while ([0, 6].includes(cursor.getDay())) cursor.setDate(cursor.getDate() - 1);
+      return toKstDate(cursor);
+    }
+
+    function formatUpdatedAt(issue) {
+      if (issue.updatedAtText) return issue.updatedAtText;
+      if (issue.updatedAt) {
+        const parsed = new Date(issue.updatedAt);
+        if (!Number.isNaN(parsed.getTime())) {
+          return new Intl.DateTimeFormat("ko-KR", {
+            timeZone: "Asia/Seoul",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          }).format(parsed);
+        }
+      }
+      return issue.date ? issue.date.replaceAll("-", ". ") : "";
+    }
+
+    function render() {
+      const query = search.value.trim().toLowerCase();
+      const selectedMonth = month.value;
+      const issues = window.FASHION_DAILY_ISSUES
+        .filter((issue) => !selectedMonth || issue.date.startsWith(selectedMonth))
+        .filter((issue) => {
+          const haystack = [issue.title, issue.summary, ...(issue.headlines || []), ...issue.tags].join(" ").toLowerCase();
+          return !query || haystack.includes(query);
+        })
+        .sort((a, b) => b.date.localeCompare(a.date));
+
+      archive.innerHTML = issues.map((issue) => `
+        <a class="card ${issue.image ? "" : "no-image"}" href="${issue.url}">
+          ${issue.image ? `<div class="thumb"><img src="${issue.image}" alt=""></div>` : ""}
+          <div class="content">
+            <div class="date">${issue.displayDate} · ${issue.day}</div>
+            <h3>${issue.title}</h3>
+            ${Array.isArray(issue.headlines) && issue.headlines.length
+              ? `<ul class="headline-list">${issue.headlines.slice(0, 3).map((headline) => `<li>${headline}</li>`).join("")}</ul>`
+              : `<p>${issue.summary}</p>`}
+            <div class="tags">${issue.tags.map((tag) => `<span class="tag">${tag}</span>`).join("")}</div>
+          </div>
+        </a>
+      `).join("");
+
+      count.textContent = `${issues.length}개 브리핑`;
+      empty.style.display = issues.length ? "none" : "block";
+
+      const latest = window.FASHION_DAILY_ISSUES
+        .slice()
+        .sort((a, b) => b.date.localeCompare(a.date))[0];
+      if (latest) {
+        const expected = expectedUpdateDate();
+        const stale = latest.date < expected;
+        status.classList.toggle("stale", stale);
+        updateLabel.textContent = stale
+          ? `업데이트 확인 필요 · 최종 ${formatUpdatedAt(latest)}`
+          : `최종 업데이트 ${formatUpdatedAt(latest)}`;
+      }
+    }
+
+    search.addEventListener("input", render);
+    month.addEventListener("change", render);
+
+    function renderWeatherForecast(days = []) {
+      if (!weatherForecast) return;
+      weatherForecast.innerHTML = days.slice(0, 7).map((day, index) => `
+        <div class="weather-day${index === 0 ? " today" : ""}">
+          <strong>${day.day || ""}</strong>
+          <div class="weather-icon" aria-hidden="true">${day.icon || "☀️"}</div>
+          <div class="weather-temp">${Math.round(day.max)}° ${Math.round(day.min)}°</div>
+        </div>
+      `).join("");
+    }
+
+    if (window.DLM_FASHION_SIGNALS) {
+      weatherSignal.textContent = window.DLM_FASHION_SIGNALS.weather || weatherSignal.textContent;
+      exchangeSignal.textContent = window.DLM_FASHION_SIGNALS.exchange || exchangeSignal.textContent;
+      renderWeatherForecast(window.DLM_FASHION_SIGNALS.forecast || []);
+    }
+    render();
+  </script>
+</body>
+</html>
