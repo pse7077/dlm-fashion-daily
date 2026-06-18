@@ -135,19 +135,6 @@
     }
     .fx-badge.down { color: var(--green); background: #eaf7f0; }
     .fx-badge.up { color: var(--red); background: #fff0ed; }
-    .fx-change {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 10px;
-      padding: 11px 12px;
-      border-radius: 12px;
-      background: #f4f5f7;
-      color: #30333a;
-      font-size: 13px;
-      font-weight: 800;
-    }
-    .fx-change strong { font-size: 18px; }
     .fx-note { color: var(--muted); font-size: 12px; line-height: 1.45; }
     .hero {
       display: block;
@@ -491,17 +478,12 @@
       const direction = diff?.[2] || "보합";
       const isDown = direction === "하락";
       const isUp = direction === "상승";
-      const icon = isDown ? "↘" : isUp ? "↗" : "→";
       exchangeCard.innerHTML = `
         <div class="fx-main">
           <div class="fx-rate">${rate}원</div>
-          <div class="fx-badge ${isDown ? "down" : isUp ? "up" : ""}">${icon} ${amount}원</div>
+          <div class="fx-badge ${isDown ? "down" : isUp ? "up" : ""}">1주 변동</div>
         </div>
-        <div class="fx-change">
-          <span>1주 변동</span>
-          <strong>${icon} ${amount}원 ${direction}</strong>
-        </div>
-        <div class="fx-note">USD/KRW 기준 · 전주 대비 변화</div>
+        <div class="fx-note">전주 대비 ${amount}원 ${direction}</div>
       `;
     }
 

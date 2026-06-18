@@ -585,7 +585,12 @@ function priorityScore(item) {
 const candidates = rawItems
   .filter((item) => item.title && item.url)
   .map((item) => ({ ...item, title: cleanArticleTitle(item.title) }))
-  .filter((item) => !previousUrls.has(item.url) && !previousKeys.has(articleKey(item.title)) && !previousTopicKeys.has(topicKey(item.title)))
+  .filter((item) => {
+    const topic = topicKey(item.title);
+    return !previousUrls.has(item.url)
+      && !previousKeys.has(articleKey(item.title))
+      && !(topic && previousTopicKeys.has(topic));
+  })
   .filter((item) => {
     const key = articleKey(item.title);
     if (seen.has(key)) return false;
@@ -832,6 +837,7 @@ function normalizeBriefingArticles(articles) {
     const key = articleKey(article.title);
     const topic = topicKey(article.title);
     if (!article.title || !article.url || !key) return;
+    if (previousKeys.has(key) || (topic && previousTopicKeys.has(topic))) return;
     if (selectedUrls.has(article.url) || selectedKeys.has(key)) return;
     if (topic && selectedTopicKeys.has(topic)) return;
     selected.push(article);
