@@ -205,6 +205,44 @@ function articleKey(value = "") {
     .toLowerCase();
 }
 
+function topicKey(value = "") {
+  const title = cleanArticleTitle(value).toLowerCase();
+  const compact = title.replace(/[^\p{L}\p{N}]+/gu, "");
+  const namedTopics = [
+    "앙드레김",
+    "키르시",
+    "비바테크놀로지",
+    "하이라이트브랜즈",
+    "경기패션창작스튜디오",
+    "8division",
+  ];
+  const named = namedTopics.find((topic) => compact.includes(topic.toLowerCase()));
+  if (named) return `topic:${named.toLowerCase()}`;
+
+  const stopwords = new Set([
+    "패션",
+    "국내",
+    "업계",
+    "브랜드",
+    "글로벌",
+    "전략",
+    "강화",
+    "확대",
+    "가속",
+    "주목",
+    "진출",
+    "유통",
+    "시장",
+    "ai",
+    "k",
+  ]);
+  const tokens = title
+    .split(/[^\p{L}\p{N}]+/u)
+    .map((token) => token.trim().toLowerCase())
+    .filter((token) => token.length >= 2 && !stopwords.has(token));
+  return tokens.slice(0, 4).sort().join("|");
+}
+
 function articleDateString(value = "") {
   const timestamp = Date.parse(value);
   return Number.isFinite(timestamp) ? kstDateString(new Date(timestamp)) : "";
@@ -483,16 +521,22 @@ const issues = Function(`"use strict"; return (${arrayMatch[1]});`)();
 async function collectPreviousArticles() {
   const previousUrls = new Set();
   const previousKeys = new Set();
+  const previousTopicKeys = new Set();
   const previousImages = new Set();
   for (const issue of issues.filter((item) => item.date !== date)) {
     if (issue.title) previousKeys.add(articleKey(issue.title));
-    for (const headline of issue.headlines || []) previousKeys.add(articleKey(headline));
+    if (issue.title) previousTopicKeys.add(topicKey(issue.title));
+    for (const headline of issue.headlines || []) {
+      previousKeys.add(articleKey(headline));
+      previousTopicKeys.add(topicKey(headline));
+    }
     if (issue.image) previousImages.add(imageKey(issue.image));
     if (!issue.url) continue;
     try {
       const html = await fs.readFile(path.join(ROOT, issue.url), "utf8");
       for (const match of html.matchAll(/<h2>([\s\S]*?)<\/h2>/gi)) {
         previousKeys.add(articleKey(match[1]));
+        previousTopicKeys.add(topicKey(match[1]));
       }
       for (const match of html.matchAll(/<a\b[^>]*href=["'](https?:\/\/[^"']+)["'][^>]*>/gi)) {
         previousUrls.add(match[1]);
@@ -505,11 +549,12 @@ async function collectPreviousArticles() {
     }
   }
   previousKeys.delete("");
+  previousTopicKeys.delete("");
   previousImages.delete("");
-  return { previousUrls, previousKeys, previousImages };
+  return { previousUrls, previousKeys, previousTopicKeys, previousImages };
 }
 
-const { previousUrls, previousKeys, previousImages } = await collectPreviousArticles();
+const { previousUrls, previousKeys, previousTopicKeys, previousImages } = await collectPreviousArticles();
 const rawItems = [...directItems, ...googleItems];
 const cutoff = briefingDate.getTime() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000;
 const upperCutoff = briefingDate.getTime() + 24 * 60 * 60 * 1000;
@@ -540,7 +585,7 @@ function priorityScore(item) {
 const candidates = rawItems
   .filter((item) => item.title && item.url)
   .map((item) => ({ ...item, title: cleanArticleTitle(item.title) }))
-  .filter((item) => !previousUrls.has(item.url) && !previousKeys.has(articleKey(item.title)))
+  .filter((item) => !previousUrls.has(item.url) && !previousKeys.has(articleKey(item.title)) && !previousTopicKeys.has(topicKey(item.title)))
   .filter((item) => {
     const key = articleKey(item.title);
     if (seen.has(key)) return false;
@@ -781,14 +826,18 @@ function normalizeBriefingArticles(articles) {
   const selected = [];
   const selectedUrls = new Set();
   const selectedKeys = new Set();
+  const selectedTopicKeys = new Set();
 
   function addArticle(article) {
     const key = articleKey(article.title);
+    const topic = topicKey(article.title);
     if (!article.title || !article.url || !key) return;
     if (selectedUrls.has(article.url) || selectedKeys.has(key)) return;
+    if (topic && selectedTopicKeys.has(topic)) return;
     selected.push(article);
     selectedUrls.add(article.url);
     selectedKeys.add(key);
+    if (topic) selectedTopicKeys.add(topic);
   }
 
   normalized.forEach(addArticle);
