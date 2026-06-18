@@ -95,7 +95,7 @@ const queries = [
   "어덜트 캐주얼 패션 브랜드 유통",
   "국내 패션 업계 브랜드 유통",
   "한국 패션 플랫폼 투자 실적",
-  "K패션 디자이너 협업 팝업",
+  "국내 패션 상권 소비 동향 권역 분석",
   "무신사 패션 신세계 현대백화점",
 ];
 
@@ -130,11 +130,17 @@ const similarBrandKeywords = [
 
 const marketTrendKeywords = [
   "상권",
-  "백화점",
-  "아울렛",
   "로드숍",
   "가두점",
-  "매장",
+  "지역",
+  "권역",
+  "소비권",
+  "상권분석",
+  "상권 회복",
+  "상권 변화",
+  "유동인구",
+  "오프라인 매출",
+  "지역 소비",
   "유통망",
   "소비",
   "객단가",
@@ -142,6 +148,20 @@ const marketTrendKeywords = [
   "트렌드",
   "중장년 시장",
 ];
+
+const storeOpeningKeywords = [
+  "입점",
+  "오픈",
+  "매장 오픈",
+  "팝업",
+  "플래그십",
+  "단독 매장",
+  "1호점",
+  "신규 매장",
+];
+
+const sourceTailPattern =
+  /(어패럴뉴스|한국섬유신문|패션비즈|패션인사이트|이투데이|매일경제|한국경제|서울경제|헤럴드경제|파이낸셜뉴스|뉴시스|뉴스1|조선비즈|머니투데이|아시아경제|문화일보|연합뉴스|테넌트뉴스|tenant\s*news|ktnews|뉴스|신문|경제|일보|투데이|저널)$/i;
 
 function decodeXml(value = "") {
   return value
@@ -160,9 +180,21 @@ function stripTags(value = "") {
 function cleanArticleTitle(value = "") {
   return stripTags(value)
     .replace(/\[[^\]]*(기자|뉴스|신문)[^\]]*\]\s*/g, "")
-    .replace(/\s*[-|]\s*(어패럴뉴스|한국섬유신문|패션비즈|패션인사이트|이투데이|매일경제|한국경제|서울경제|헤럴드경제|뉴스1|뉴스|신문)\s*$/i, "")
+    .replace(/\s*[-–—|:：]\s*(어패럴뉴스|한국섬유신문|패션비즈|패션인사이트|이투데이|매일경제|한국경제|서울경제|헤럴드경제|파이낸셜뉴스|뉴시스|뉴스1|조선비즈|머니투데이|아시아경제|문화일보|연합뉴스|테넌트뉴스|tenant\s*news|ktnews|뉴스|신문)\s*$/i, "")
     .replace(/\s*[-|]\s*[a-z0-9.-]+\.(com|co\.kr|kr|net|org)\s*$/i, "")
-    .replace(/\s*[-|]\s*[^-|]{1,20}(뉴스|신문|경제|일보|투데이|저널)\s*$/i, "")
+    .replace(/\s*[-–—|:：]\s*[^-|:：]{1,24}(뉴스|신문|경제|일보|투데이|저널)\s*$/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function publicTitle(value = "") {
+  return cleanArticleTitle(value)
+    .replace(/^(독립문|PAT|피에이티)\s*(관점|유사|관련)?\s*[-–—|:：,]?\s*/i, "")
+    .replace(/^(PAT\s*유사|피에이티\s*유사)\s*/i, "")
+    .replace(/^(어덜트\s*캐주얼|중장년\s*캐주얼)\s*[-–—|:：,]?\s*/i, "")
+    .replace(/\s*[-–—|:：]\s*[^-|:：]{1,24}$/i, (match) =>
+      sourceTailPattern.test(match.trim().replace(/^[-–—|:：]\s*/, "").trim()) ? "" : match,
+    )
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -172,8 +204,10 @@ function cleanSummaryText(value = "") {
     .replace(/&nbsp;/gi, " ")
     .replace(/\u00a0/g, " ")
     .replace(/\[[^\]]*(기자|뉴스|신문)[^\]]*\]\s*/g, "")
-    .replace(/\s*[-|]\s*(어패럴뉴스|한국섬유신문|패션비즈|패션인사이트|이투데이|매일경제|한국경제|서울경제|헤럴드경제|뉴스1|뉴스|신문)\s*$/i, "")
+    .replace(/\s*[-–—|:：]\s*(어패럴뉴스|한국섬유신문|패션비즈|패션인사이트|이투데이|매일경제|한국경제|서울경제|헤럴드경제|파이낸셜뉴스|뉴시스|뉴스1|조선비즈|머니투데이|아시아경제|문화일보|연합뉴스|테넌트뉴스|tenant\s*news|ktnews|뉴스|신문)\s*$/i, "")
     .replace(/\s*[-|]\s*[a-z0-9.-]+\.(com|co\.kr|kr|net|org)\s*$/i, "")
+    .replace(/^(독립문|PAT|피에이티)\s*(관점|유사|관련)?\s*[-–—|:：,]?\s*/i, "")
+    .replace(/^(어덜트\s*캐주얼|중장년\s*캐주얼)\s*[-–—|:：,]?\s*/i, "")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -192,7 +226,7 @@ function fallbackSummaryBullets(item) {
   const parts = sentenceParts(item.description || item.summary || item.title);
   const bullets = parts.slice(0, 3);
   while (bullets.length < 3) {
-    if (bullets.length === 0) bullets.push(`${cleanArticleTitle(item.title)} 관련 소식이 업계 주요 이슈로 확인됐습니다.`);
+    if (bullets.length === 0) bullets.push(`${publicTitle(item.title)} 관련 소식이 업계 주요 이슈로 확인됐습니다.`);
     else if (bullets.length === 1) bullets.push("브랜드 운영과 유통 전략 관점에서 추가 확인할 만한 내용입니다.");
     else bullets.push("세부 수치와 맥락은 원문 기사 확인이 필요합니다.");
   }
@@ -200,13 +234,13 @@ function fallbackSummaryBullets(item) {
 }
 
 function articleKey(value = "") {
-  return cleanArticleTitle(value)
+  return publicTitle(value)
     .replace(/[^\p{L}\p{N}]+/gu, "")
     .toLowerCase();
 }
 
 function topicKey(value = "") {
-  const title = cleanArticleTitle(value).toLowerCase();
+  const title = publicTitle(value).toLowerCase();
   const compact = title.replace(/[^\p{L}\p{N}]+/gu, "");
   const namedTopics = [
     "앙드레김",
@@ -249,7 +283,7 @@ function articleDateString(value = "") {
 }
 
 function titleScore(value = "") {
-  const title = cleanArticleTitle(value);
+  const title = publicTitle(value);
   if (!title) return 0;
   let score = Math.min(title.length, 90);
   if (title.length < 8) score -= 35;
@@ -260,7 +294,7 @@ function titleScore(value = "") {
 
 function bestTitle(...values) {
   return values
-    .map(cleanArticleTitle)
+    .map(publicTitle)
     .filter(Boolean)
     .sort((a, b) => titleScore(b) - titleScore(a))[0] || "";
 }
@@ -576,15 +610,20 @@ function priorityScore(item) {
   for (const keyword of similarBrandKeywords) {
     if (text.includes(keyword.toLowerCase())) score += 45;
   }
-  for (const keyword of marketTrendKeywords) {
-    if (text.includes(keyword.toLowerCase())) score += 35;
+  const hasMarketTrend = marketTrendKeywords.some((keyword) => text.includes(keyword.toLowerCase()));
+  const hasStoreOpening = storeOpeningKeywords.some((keyword) => text.includes(keyword.toLowerCase()));
+  if (hasMarketTrend) {
+    score += 45;
+  }
+  if (hasStoreOpening && !hasMarketTrend) {
+    score -= 55;
   }
   return score;
 }
 
 const candidates = rawItems
   .filter((item) => item.title && item.url)
-  .map((item) => ({ ...item, title: cleanArticleTitle(item.title) }))
+  .map((item) => ({ ...item, title: publicTitle(item.title) }))
   .filter((item) => {
     const topic = topicKey(item.title);
     return !previousUrls.has(item.url)
@@ -619,7 +658,7 @@ const articleContext = candidates
 
 const prompt = `
 오늘 날짜는 ${date}, 한국 시간 기준이다.
-아래는 최근 2일 이내 국내 패션 산업 관련 뉴스 후보이다.
+아래는 최근 3일 이내 국내 패션 산업 관련 뉴스 후보이다.
 
 ${articleContext}
 
@@ -629,10 +668,14 @@ ${articleContext}
 Google News 후보는 direct 후보만으로 중요한 이슈가 부족할 때 보조로만 사용하라.
 이 브리핑은 독립문이라는 패션회사와 PAT 브랜드 관점에서 본다.
 PAT와 유사한 어덜트 캐주얼, 중장년, 남성복·여성복, 상권, 유통망, 패션 동향 기사는 우선순위를 높게 판단하라.
+단, 독립문, PAT, 어덜트 캐주얼, 유사 브랜드 같은 내부 선별 기준 문구를 leadHeadline, title, summary, summaryBullets, impact에 직접 쓰지 마라.
+leadHeadline과 각 기사 title 끝에는 언론사명, 출처명, 사이트명, 기자명, 도메인을 절대 붙이지 마라.
+상권 기사는 개별 브랜드의 단순 입점, 오픈, 팝업 소식보다 지역·권역 단위의 소비 흐름, 상권 변화, 유동인구, 유통망 분석을 우선 선택하라.
+개별 브랜드가 특정 매장에 입점했다는 내용만 있는 후보는 중요도가 매우 높지 않으면 선택하지 마라.
 기사에 없는 사실이나 숫자를 만들지 마라. 제목과 출처 정보만으로 확신할 수 없는 내용은 단정하지 마라.
 각 기사에는 본문을 길게 붙이지 말고, 핵심 내용만 3개의 짧은 bullet로 요약하라.
 summaryBullets는 각 항목 35자 이상 90자 이하의 한국어 문장으로 작성하라.
-HTML 엔티티, &nbsp;, 언론사명 꼬리, 기자명, 출처명은 summaryBullets에 넣지 마라.
+HTML 엔티티, &nbsp;, 언론사명 꼬리, 기자명, 출처명은 모든 공개 문장에 넣지 마라.
 반드시 입력 목록의 링크를 그대로 사용하라.
 
 JSON 객체만 출력하라. 마크다운 코드 블록은 쓰지 마라.
@@ -644,7 +687,7 @@ JSON 객체만 출력하라. 마크다운 코드 블록은 쓰지 마라.
   "tags": ["태그1", "태그2", "태그3", "태그4"],
   "articles": [
     {
-      "title": "기사 제목을 간결하게 다듬은 제목",
+      "title": "기사 제목을 간결하게 다듬은 제목. 끝에 출처를 붙이지 않음",
       "summary": "기사 전체를 한 문장으로 압축한 요약",
       "summaryBullets": ["중요 내용 1", "중요 내용 2", "중요 내용 3"],
       "impact": "업계에 미칠 가능성 또는 의미 1문장. 분석임이 드러나게 표현",
@@ -673,7 +716,7 @@ function normalizeArticleDate(value) {
 function inferCategory(item) {
   const text = `${item.title || ""} ${item.description || ""}`.toLowerCase();
   if (/(어덜트|4050|5060|중장년|여성복|남성복|캐주얼)/i.test(text)) return "어덜트";
-  if (/(백화점|아울렛|매장|상권|팝업|유통|플랫폼|무신사|판매)/i.test(text)) return "유통";
+  if (/(상권|지역|권역|유동인구|소비권|백화점|아울렛|매장|유통|플랫폼|무신사|판매)/i.test(text)) return "유통";
   if (/(투자|실적|매출|영업이익|인수|상장)/i.test(text)) return "투자";
   if (/(ai|인공지능|테크|기술|ip|데이터)/i.test(text)) return "테크";
   if (/(관세|규제|정부|정책|공급망)/i.test(text)) return "정책";
@@ -683,10 +726,13 @@ function inferCategory(item) {
 function fallbackImpact(item) {
   const text = `${item.title || ""} ${item.description || ""}`.toLowerCase();
   if (/(어덜트|4050|5060|중장년|여성복|남성복|캐주얼)/i.test(text)) {
-    return "어덜트 캐주얼 고객층의 취향 변화와 상품 기획 방향을 점검할 수 있는 소식입니다.";
+    return "중장년 고객층의 취향 변화와 상품 기획 방향을 점검할 수 있는 소식입니다.";
   }
-  if (/(백화점|아울렛|매장|상권|팝업|유통|플랫폼|판매)/i.test(text)) {
-    return "오프라인 거점과 판매 채널 전략을 다시 살펴볼 만한 유통 관련 흐름입니다.";
+  if (/(상권|지역|권역|소비권|유동인구|가두점|로드숍)/i.test(text)) {
+    return "지역 상권과 오프라인 소비 흐름을 점검할 때 참고할 만한 유통 신호입니다.";
+  }
+  if (/(백화점|아울렛|매장|팝업|유통|플랫폼|판매)/i.test(text)) {
+    return "판매 채널 전략을 다시 살펴볼 만한 유통 관련 흐름입니다.";
   }
   if (/(투자|실적|매출|영업이익|인수|상장)/i.test(text)) {
     return "브랜드의 성장성, 수익성, 투자 우선순위를 판단할 때 참고할 만한 재무·사업 신호입니다.";
@@ -715,7 +761,7 @@ function fallbackBriefing() {
       "오늘 브리핑은 국내 패션 전문 매체에서 확인한 주요 기사 흐름을 중심으로 구성했습니다. 세부 내용은 원문 기사에서 함께 확인해 주세요.",
     tags: ["패션업계", "브랜드", "유통", "트렌드"],
     articles: picked.map((item) => ({
-      title: cleanArticleTitle(item.title),
+      title: publicTitle(item.title),
       summary: fallbackSummaryBullets(item)[0],
       summaryBullets: fallbackSummaryBullets(item),
       impact: fallbackImpact(item),
@@ -769,8 +815,8 @@ briefing = generated;
 }
 
 function sameArticle(candidate, article) {
-  const candidateTitle = cleanArticleTitle(candidate.title || "");
-  const articleTitle = cleanArticleTitle(article.title || "");
+  const candidateTitle = publicTitle(candidate.title || "");
+  const articleTitle = publicTitle(article.title || "");
   return (
     candidate.url === article.url ||
     candidateTitle === articleTitle ||
@@ -782,7 +828,7 @@ function sameArticle(candidate, article) {
 function toBriefingArticle(item) {
   const summaryBullets = fallbackSummaryBullets(item);
   return {
-    title: cleanArticleTitle(item.title),
+    title: publicTitle(item.title),
     summary: summaryBullets[0],
     summaryBullets,
     impact: fallbackImpact(item),
@@ -809,7 +855,7 @@ function normalizeBriefingArticles(articles) {
 
     return {
       ...article,
-      title: cleanTitle || cleanArticleTitle(article.title),
+      title: cleanTitle || publicTitle(article.title),
       summary: cleanSummaryText(article.summary || candidate?.description || cleanTitle),
       summaryBullets: Array.isArray(article.summaryBullets) && article.summaryBullets.length >= 3
         ? article.summaryBullets.map(cleanSummaryText).filter(Boolean).slice(0, 3)
@@ -957,6 +1003,9 @@ async function fetchWeeklySignals() {
 
 const weeklySignals = await fetchWeeklySignals();
 
+briefing.leadHeadline = publicTitle(briefing.leadHeadline || "국내 패션 업계 주요 뉴스 업데이트");
+briefing.leadSummary = cleanSummaryText(briefing.leadSummary || "패션 전문 매체와 주요 뉴스 후보를 바탕으로 오늘 확인할 만한 업계 소식을 모았습니다.");
+briefing.watchPoint = cleanSummaryText(briefing.watchPoint || "오늘 브리핑은 국내 패션 전문 매체에서 확인한 주요 기사 흐름을 중심으로 구성했습니다.");
 briefing.articles = normalizeBriefingArticles(briefing.articles || []);
 
 const usedImages = new Set();
@@ -978,7 +1027,7 @@ const enrichedArticles = enrichedDraft.sort((a, b) => {
 
 const issueCoverImage = enrichedArticles.find((article) => isUsableArticleImage(article.image))?.image || "";
 const issueHeadlines = enrichedArticles
-  .map((article) => cleanArticleTitle(article.title))
+  .map((article) => publicTitle(article.title))
   .filter(Boolean)
   .slice(0, ARTICLE_LIMIT);
 
@@ -1050,7 +1099,7 @@ const issueHtml = `<!doctype html>
     </section>
     <section class="grid">${articleCards}</section>
     <section class="watch"><h3>오늘의 관전 포인트</h3><p>${escapeHtml(briefing.watchPoint)}</p></section>
-    <footer>최근 공개된 뉴스 제목과 출처를 바탕으로 AI가 선별·요약했습니다. 중요한 의사결정 전에는 원문을 확인하세요.</footer>
+    <footer>최근 공개된 뉴스 제목과 출처를 바탕으로 선별·요약했습니다. 중요한 의사결정 전에는 원문을 확인하세요.</footer>
   </main>
 </body>
 </html>`;
@@ -1064,7 +1113,7 @@ const issue = {
   day,
   updatedAt,
   updatedAtText,
-  title: briefing.leadHeadline,
+  title: publicTitle(briefing.leadHeadline),
   summary: briefing.leadSummary,
   headlines: issueHeadlines,
   image: issueCoverImage,
