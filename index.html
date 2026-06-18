@@ -9,15 +9,17 @@
     :root {
       --ink: #101114;
       --muted: #70737c;
-      --line: #e7e8eb;
-      --soft: #f3f4f6;
       --blue: #3157ff;
+      --line: #e7e8eb;
+      --soft: #f4f5f7;
+      --green: #1f9d62;
+      --red: #d84a3a;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      color: var(--ink);
       background: #fff;
+      color: var(--ink);
       font-family: Arial, "Noto Sans KR", sans-serif;
     }
     a { color: inherit; text-decoration: none; }
@@ -25,16 +27,16 @@
     header {
       position: sticky;
       top: 0;
-      z-index: 10;
+      z-index: 20;
       border-bottom: 1px solid rgba(231,232,235,.9);
-      background: rgba(255,255,255,.88);
+      background: rgba(255,255,255,.9);
       backdrop-filter: blur(14px);
     }
     .nav {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      min-height: 70px;
+      min-height: 56px;
     }
     .brand {
       font-size: 18px;
@@ -56,71 +58,38 @@
       border-radius: 50%;
       box-shadow: 0 0 0 4px rgba(32,178,107,.11);
     }
-    .status.stale { color: #d92d20; font-weight: 800; }
+    .status.stale { color: var(--red); font-weight: 800; }
     .status.stale .dot {
-      background: #d92d20;
-      box-shadow: 0 0 0 4px rgba(217,45,32,.12);
-    }
-    .hero {
-      display: grid;
-      grid-template-columns: minmax(0, 1.4fr) minmax(280px, .6fr);
-      gap: 50px;
-      padding: 84px 0 58px;
-      border-bottom: 1px solid var(--line);
-    }
-    .eyebrow {
-      margin-bottom: 18px;
-      color: var(--blue);
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: .13em;
-      text-transform: uppercase;
-    }
-    h1 {
-      max-width: 760px;
-      margin: 0;
-      font-size: clamp(48px, 7vw, 88px);
-      line-height: .95;
-      letter-spacing: -.075em;
-    }
-    .intro {
-      align-self: end;
-      color: var(--muted);
-      font-size: 15px;
-      line-height: 1.75;
+      background: var(--red);
+      box-shadow: 0 0 0 4px rgba(216,74,58,.12);
     }
     .signals {
       display: grid;
-      grid-template-columns: minmax(0, 1.5fr) minmax(260px, .55fr);
+      grid-template-columns: minmax(0, 1.45fr) minmax(270px, .55fr);
       gap: 12px;
-      padding: 0 0 16px;
+      padding: 18px 0 8px;
     }
     .signal {
-      padding: 14px 18px;
+      padding: 14px 16px;
       border: 1px solid var(--line);
       border-radius: 18px;
       background: rgba(250,250,250,.92);
     }
     .signal strong {
       display: block;
-      margin-bottom: 7px;
+      margin-bottom: 8px;
       color: var(--blue);
       font-size: 11px;
       letter-spacing: .08em;
     }
-    .signal span {
-      color: #30333a;
-      font-size: 14px;
-      line-height: 1.55;
-    }
+    .weather-summary { display: none; }
     .weather-strip {
       display: grid;
-      grid-template-columns: repeat(7, minmax(54px, 1fr));
+      grid-template-columns: repeat(7, minmax(52px, 1fr));
       gap: 8px;
-      margin-top: 8px;
     }
     .weather-day {
-      min-height: 78px;
+      min-height: 72px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -133,46 +102,118 @@
     }
     .weather-day.today {
       background: #e9edf3;
-      box-shadow: inset 0 0 0 1px rgba(49,87,255,.12);
+      box-shadow: inset 0 0 0 1px rgba(49,87,255,.14);
     }
-    .weather-icon {
-      font-size: 25px;
-      line-height: 1;
+    .weather-icon { font-size: 24px; line-height: 1; }
+    .weather-temp { color: #4c5058; font-size: 12px; }
+    #exchange-signal { display: none; }
+    .fx-card {
+      display: grid;
+      gap: 10px;
+      min-height: 88px;
     }
-    .weather-temp {
-      color: #4c5058;
-      font-size: 12px;
+    .fx-main {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .fx-rate {
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: -.045em;
+    }
+    .fx-badge {
+      min-width: 68px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: #f1f3f6;
+      font-size: 13px;
+      font-weight: 900;
+      text-align: center;
+      white-space: nowrap;
+    }
+    .fx-badge.down { color: var(--green); background: #eaf7f0; }
+    .fx-badge.up { color: var(--red); background: #fff0ed; }
+    .fx-bars {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      align-items: end;
+      gap: 5px;
+      height: 34px;
+    }
+    .fx-bars span {
+      display: block;
+      width: 100%;
+      min-height: 8px;
+      border-radius: 999px 999px 4px 4px;
+      background: linear-gradient(180deg, #3157ff, #9fb0ff);
+      opacity: .42;
+    }
+    .fx-note { color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .hero {
+      display: block;
+      padding: 46px 0 38px;
+      border-bottom: 1px solid var(--line);
+    }
+    .eyebrow {
+      margin-bottom: 16px;
+      color: var(--blue);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+    h1 {
+      max-width: 760px;
+      margin: 0 0 20px;
+      font-size: clamp(42px, 5.6vw, 70px);
+      line-height: .98;
+      letter-spacing: -.075em;
+    }
+    .intro {
+      max-width: 700px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.75;
     }
     .controls {
       display: grid;
       grid-template-columns: 1fr 190px;
       gap: 12px;
-      padding: 28px 0;
+      padding: 26px 0;
     }
     .field {
       width: 100%;
       min-height: 48px;
       padding: 0 16px;
       border: 1px solid var(--line);
-      border-radius: 12px;
-      outline: 0;
+      border-radius: 10px;
       background: var(--soft);
       color: var(--ink);
       font: inherit;
     }
-    .field:focus { border-color: var(--blue); background: #fff; }
     .section-head {
       display: flex;
-      align-items: flex-end;
       justify-content: space-between;
-      margin: 30px 0 18px;
+      align-items: end;
+      gap: 16px;
+      padding: 18px 0 18px;
     }
-    .section-head h2 { margin: 0; font-size: 24px; letter-spacing: -.04em; }
-    .count { color: var(--muted); font-size: 12px; }
+    .section-head h2 {
+      margin: 0;
+      font-size: 26px;
+      letter-spacing: -.04em;
+    }
+    .section-head span {
+      color: var(--muted);
+      font-size: 12px;
+    }
     .grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 18px;
+      gap: 20px;
       padding-bottom: 80px;
     }
     .card {
@@ -198,13 +239,13 @@
       content: "Briefing";
       width: fit-content;
       margin-bottom: 34px;
-      padding: 7px 10px;
+      padding: 8px 13px;
       border-radius: 999px;
       background: var(--soft);
       color: var(--blue);
       font-size: 10px;
-      font-weight: 800;
-      letter-spacing: .08em;
+      font-weight: 900;
+      letter-spacing: .09em;
       text-transform: uppercase;
     }
     .content { padding: 22px; }
@@ -220,42 +261,44 @@
     }
     .headline-list li {
       position: relative;
-      padding-left: 13px;
-      color: #484c55;
+      padding-left: 12px;
+      color: #52565f;
       font-size: 13px;
-      line-height: 1.45;
+      line-height: 1.5;
     }
     .headline-list li::before {
       content: "";
       position: absolute;
       left: 0;
-      top: .62em;
-      width: 5px;
-      height: 5px;
+      top: .65em;
+      width: 4px;
+      height: 4px;
       border-radius: 50%;
       background: var(--blue);
     }
-    .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 18px; }
-    .tag { padding: 6px 9px; border-radius: 999px; background: var(--soft); color: #51545c; font-size: 10px; }
-    .empty {
-      display: none;
-      padding: 60px 20px 100px;
-      color: var(--muted);
-      text-align: center;
+    .tags { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 18px; }
+    .tag {
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: var(--soft);
+      color: #666a72;
+      font-size: 11px;
     }
+    .empty { display: none; padding: 48px 0 80px; color: var(--muted); }
     footer {
-      padding: 22px 0 34px;
       border-top: 1px solid var(--line);
+      padding: 28px 0;
       color: var(--muted);
-      font-size: 10px;
+      font-size: 11px;
     }
     @media (max-width: 760px) {
       .wrap { width: min(100% - 28px, 1180px); }
-      .hero { grid-template-columns: 1fr; gap: 24px; padding: 54px 0 38px; }
-      h1 { font-size: clamp(46px, 15vw, 68px); }
-      .intro { max-width: 520px; }
+      .nav { min-height: 54px; }
+      .status { font-size: 10px; }
       .signals { grid-template-columns: 1fr; }
       .weather-strip { grid-template-columns: repeat(4, minmax(58px, 1fr)); }
+      .hero { padding: 36px 0 30px; }
+      h1 { font-size: clamp(38px, 12vw, 58px); }
       .controls { grid-template-columns: 1fr; }
       .grid { grid-template-columns: 1fr; }
       .thumb { height: 58vw; min-height: 240px; max-height: 360px; }
@@ -268,25 +311,25 @@
       <a class="brand" href="./">DLM FASHION <span>DAILY</span></a>
       <div class="status" id="update-status"><span class="dot"></span><span id="update-label">최종 업데이트 확인 중</span></div>
     </div>
-    <section class="wrap signals" aria-label="주간 날씨와 환율">
-      <div class="signal">
-        <strong>WEEKLY WEATHER</strong>
-        <span id="weather-signal">서울 주간 날씨 정보를 불러오는 중입니다.</span>
-        <div class="weather-strip" id="weather-forecast" aria-label="7일 날씨 예보"></div>
-      </div>
-      <div class="signal">
-        <strong>FX CHECK</strong>
-        <span id="exchange-signal">USD/KRW 환율 정보를 불러오는 중입니다.</span>
-      </div>
-    </section>
   </header>
+
+  <section class="wrap signals" aria-label="주간 날씨와 환율">
+    <div class="signal">
+      <strong>WEEKLY WEATHER</strong>
+      <span class="weather-summary" id="weather-signal">서울 주간 날씨 정보를 불러오는 중입니다.</span>
+      <div class="weather-strip" id="weather-forecast" aria-label="7일 날씨 예보"></div>
+    </div>
+    <div class="signal">
+      <strong>FX CHECK</strong>
+      <span id="exchange-signal">USD/KRW 환율 정보를 불러오는 중입니다.</span>
+      <div class="fx-card" id="exchange-card" aria-label="환율 요약"></div>
+    </div>
+  </section>
 
   <main class="wrap">
     <section class="hero">
-      <div>
-        <div class="eyebrow">Korea Fashion Industry Intelligence</div>
-        <h1>매일의 신호를<br>하나의 아카이브로.</h1>
-      </div>
+      <div class="eyebrow">Korea Fashion Industry Intelligence</div>
+      <h1>매일의 신호를<br>하나의 아카이브로.</h1>
       <p class="intro">
         국내 패션 업계의 브랜드, 유통, 투자, 플랫폼, 테크 소식을 선별합니다.
         최신 브리핑을 읽고 날짜나 키워드로 지난 이슈를 다시 찾을 수 있습니다.
@@ -301,7 +344,7 @@
     <section>
       <div class="section-head">
         <h2>브리핑 아카이브</h2>
-        <span class="count" id="count"></span>
+        <span id="count">0개 브리핑</span>
       </div>
       <div class="grid" id="archive"></div>
       <div class="empty" id="empty">조건에 맞는 브리핑이 없습니다.</div>
@@ -324,6 +367,7 @@
     const updateLabel = document.querySelector("#update-label");
     const weatherSignal = document.querySelector("#weather-signal");
     const exchangeSignal = document.querySelector("#exchange-signal");
+    const exchangeCard = document.querySelector("#exchange-card");
     const weatherForecast = document.querySelector("#weather-forecast");
 
     function toKstDate(date = new Date()) {
@@ -367,30 +411,52 @@
       return issue.date ? issue.date.replaceAll("-", ". ") : "";
     }
 
+    function imageKey(url = "") {
+      try {
+        const parsed = new URL(url);
+        parsed.search = "";
+        parsed.hash = "";
+        return parsed.toString().replace(/^https?:\/\//i, "").replace(/\/$/, "").toLowerCase();
+      } catch {
+        return String(url || "").trim().toLowerCase();
+      }
+    }
+
+    function issueImage(issue, usedImages) {
+      const key = imageKey(issue.image || "");
+      if (!key || usedImages.has(key)) return "";
+      usedImages.add(key);
+      return issue.image;
+    }
+
     function render() {
       const query = search.value.trim().toLowerCase();
       const selectedMonth = month.value;
+      const usedImages = new Set();
       const issues = window.FASHION_DAILY_ISSUES
         .filter((issue) => !selectedMonth || issue.date.startsWith(selectedMonth))
         .filter((issue) => {
-          const haystack = [issue.title, issue.summary, ...(issue.headlines || []), ...issue.tags].join(" ").toLowerCase();
+          const haystack = [issue.title, issue.summary, ...(issue.headlines || []), ...(issue.tags || [])].join(" ").toLowerCase();
           return !query || haystack.includes(query);
         })
         .sort((a, b) => b.date.localeCompare(a.date));
 
-      archive.innerHTML = issues.map((issue) => `
-        <a class="card ${issue.image ? "" : "no-image"}" href="${issue.url}">
-          ${issue.image ? `<div class="thumb"><img src="${issue.image}" alt=""></div>` : ""}
-          <div class="content">
-            <div class="date">${issue.displayDate} · ${issue.day}</div>
-            <h3>${issue.title}</h3>
-            ${Array.isArray(issue.headlines) && issue.headlines.length
-              ? `<ul class="headline-list">${issue.headlines.slice(0, 3).map((headline) => `<li>${headline}</li>`).join("")}</ul>`
-              : `<p>${issue.summary}</p>`}
-            <div class="tags">${issue.tags.map((tag) => `<span class="tag">${tag}</span>`).join("")}</div>
-          </div>
-        </a>
-      `).join("");
+      archive.innerHTML = issues.map((issue) => {
+        const image = issueImage(issue, usedImages);
+        return `
+          <a class="card ${image ? "" : "no-image"}" href="${issue.url}">
+            ${image ? `<div class="thumb"><img src="${image}" alt=""></div>` : ""}
+            <div class="content">
+              <div class="date">${issue.displayDate} · ${issue.day}</div>
+              <h3>${issue.title}</h3>
+              ${Array.isArray(issue.headlines) && issue.headlines.length
+                ? `<ul class="headline-list">${issue.headlines.slice(0, 3).map((headline) => `<li>${headline}</li>`).join("")}</ul>`
+                : `<p>${issue.summary}</p>`}
+              <div class="tags">${(issue.tags || []).map((tag) => `<span class="tag">${tag}</span>`).join("")}</div>
+            </div>
+          </a>
+        `;
+      }).join("");
 
       count.textContent = `${issues.length}개 브리핑`;
       empty.style.display = issues.length ? "none" : "block";
@@ -408,9 +474,6 @@
       }
     }
 
-    search.addEventListener("input", render);
-    month.addEventListener("change", render);
-
     function renderWeatherForecast(days = []) {
       if (!weatherForecast) return;
       weatherForecast.innerHTML = days.slice(0, 7).map((day, index) => `
@@ -422,10 +485,36 @@
       `).join("");
     }
 
+    function renderExchangeCard(text = "") {
+      if (!exchangeCard) return;
+      const rate = text.match(/USD\/KRW\s*([\d,]+)원/)?.[1] || "-";
+      const diff = text.match(/대비\s*([\d.]+)원\s*(상승|하락|보합)/);
+      const amount = diff?.[1] || "0";
+      const direction = diff?.[2] || "보합";
+      const isDown = direction === "하락";
+      const isUp = direction === "상승";
+      const icon = isDown ? "↘" : isUp ? "↗" : "→";
+      const barHeights = isDown ? [78, 68, 72, 54, 48, 38, 30] : isUp ? [28, 35, 45, 58, 62, 70, 82] : [45, 48, 44, 50, 46, 48, 47];
+      exchangeCard.innerHTML = `
+        <div class="fx-main">
+          <div class="fx-rate">${rate}원</div>
+          <div class="fx-badge ${isDown ? "down" : isUp ? "up" : ""}">${icon} ${amount}원</div>
+        </div>
+        <div class="fx-bars" aria-hidden="true">
+          ${barHeights.map((height) => `<span style="height:${height}%"></span>`).join("")}
+        </div>
+        <div class="fx-note">1주 전 대비 ${direction} · USD/KRW</div>
+      `;
+    }
+
+    search.addEventListener("input", render);
+    month.addEventListener("change", render);
+
     if (window.DLM_FASHION_SIGNALS) {
       weatherSignal.textContent = window.DLM_FASHION_SIGNALS.weather || weatherSignal.textContent;
       exchangeSignal.textContent = window.DLM_FASHION_SIGNALS.exchange || exchangeSignal.textContent;
       renderWeatherForecast(window.DLM_FASHION_SIGNALS.forecast || []);
+      renderExchangeCard(window.DLM_FASHION_SIGNALS.exchange || "");
     }
     render();
   </script>

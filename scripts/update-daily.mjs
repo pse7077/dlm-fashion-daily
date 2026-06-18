@@ -261,6 +261,17 @@ function isUsableArticleImage(url = "") {
   }
 }
 
+function imageKey(url = "") {
+  try {
+    const parsed = new URL(url);
+    parsed.search = "";
+    parsed.hash = "";
+    return parsed.toString().replace(/^https?:\/\//i, "").replace(/\/$/, "").toLowerCase();
+  } catch {
+    return String(url || "").trim().toLowerCase();
+  }
+}
+
 function escapeHtml(value = "") {
   return String(value)
     .replace(/&/g, "&amp;")
@@ -472,9 +483,11 @@ const issues = Function(`"use strict"; return (${arrayMatch[1]});`)();
 async function collectPreviousArticles() {
   const previousUrls = new Set();
   const previousKeys = new Set();
+  const previousImages = new Set();
   for (const issue of issues.filter((item) => item.date !== date)) {
     if (issue.title) previousKeys.add(articleKey(issue.title));
     for (const headline of issue.headlines || []) previousKeys.add(articleKey(headline));
+    if (issue.image) previousImages.add(imageKey(issue.image));
     if (!issue.url) continue;
     try {
       const html = await fs.readFile(path.join(ROOT, issue.url), "utf8");
@@ -484,15 +497,19 @@ async function collectPreviousArticles() {
       for (const match of html.matchAll(/<a\b[^>]*href=["'](https?:\/\/[^"']+)["'][^>]*>/gi)) {
         previousUrls.add(match[1]);
       }
+      for (const match of html.matchAll(/<img\b[^>]*src=["']([^"']+)["'][^>]*>/gi)) {
+        previousImages.add(imageKey(match[1]));
+      }
     } catch {
       // Older archive pages may not exist locally during setup.
     }
   }
   previousKeys.delete("");
-  return { previousUrls, previousKeys };
+  previousImages.delete("");
+  return { previousUrls, previousKeys, previousImages };
 }
 
-const { previousUrls, previousKeys } = await collectPreviousArticles();
+const { previousUrls, previousKeys, previousImages } = await collectPreviousArticles();
 const rawItems = [...directItems, ...googleItems];
 const cutoff = briefingDate.getTime() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000;
 const upperCutoff = briefingDate.getTime() + 24 * 60 * 60 * 1000;
@@ -784,12 +801,21 @@ function normalizeBriefingArticles(articles) {
   return selected.slice(0, ARTICLE_LIMIT);
 }
 
-async function chooseArticleImage(article) {
+async function chooseArticleImage(article, usedImages) {
+  const accept = (image) => {
+    if (!isUsableArticleImage(image)) return "";
+    const key = imageKey(image);
+    if (!key || previousImages.has(key) || usedImages.has(key)) return "";
+    usedImages.add(key);
+    return image;
+  };
   const candidate = candidates.find((item) => sameArticle(item, article));
-  if (candidate?.imageUrl && isUsableArticleImage(candidate.imageUrl)) return candidate.imageUrl;
+  const candidateImage = accept(candidate?.imageUrl);
+  if (candidateImage) return candidateImage;
 
   const pageImage = await fetchPageImage(article.url);
-  if (pageImage) return pageImage;
+  const fetchedImage = accept(pageImage);
+  if (fetchedImage) return fetchedImage;
 
   return "";
 }
@@ -878,12 +904,16 @@ const weeklySignals = await fetchWeeklySignals();
 
 briefing.articles = normalizeBriefingArticles(briefing.articles || []);
 
-const enrichedArticles = (await Promise.all(
-  briefing.articles.slice(0, ARTICLE_LIMIT).map(async (article) => ({
+const usedImages = new Set();
+const enrichedDraft = [];
+for (const article of briefing.articles.slice(0, ARTICLE_LIMIT)) {
+  enrichedDraft.push({
     ...article,
-    image: await chooseArticleImage(article),
-  })),
-)).sort((a, b) => {
+    image: await chooseArticleImage(article, usedImages),
+  });
+}
+
+const enrichedArticles = enrichedDraft.sort((a, b) => {
   const imageDelta = Number(isUsableArticleImage(b.image)) - Number(isUsableArticleImage(a.image));
   if (imageDelta) return imageDelta;
   const candidateA = candidates.find((item) => sameArticle(item, a)) || a;
