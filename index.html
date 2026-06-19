@@ -467,7 +467,12 @@
 
     function renderWeatherForecast(days = []) {
       if (!weatherForecast) return;
-      weatherForecast.innerHTML = days.slice(0, 7).map((day, index) => `
+      const today = toKstDate();
+      const upcoming = days
+        .filter((day) => !day.date || day.date >= today)
+        .slice(0, 7);
+      const visibleDays = upcoming.length ? upcoming : days.slice(0, 7);
+      weatherForecast.innerHTML = visibleDays.map((day, index) => `
         <div class="weather-day${index === 0 ? " today" : ""}">
           <strong>${day.day || ""}</strong>
           <div class="weather-icon" aria-hidden="true">${day.icon || "☀️"}</div>
@@ -478,10 +483,19 @@
 
     function renderExchangeCard(text = "") {
       if (!exchangeCard) return;
-      const rate = text.match(/USD\/KRW\s*([\d,]+)원/)?.[1] || "-";
+      const rate = text.match(/USD\/KRW\s*([\d,]+)원/)?.[1] || "";
       const diff = text.match(/대비\s*([\d.]+)원\s*(상승|하락|보합)/);
-      const amount = diff?.[1] || "0";
-      const direction = diff?.[2] || "보합";
+      if (!rate || !diff) {
+        exchangeCard.innerHTML = `
+          <div class="fx-main">
+            <div class="fx-rate">확인 중</div>
+          </div>
+          <div class="fx-note">USD/KRW 환율 데이터 업데이트 대기</div>
+        `;
+        return;
+      }
+      const amount = diff[1];
+      const direction = diff[2];
       const isDown = direction === "하락";
       const isUp = direction === "상승";
       const arrow = isDown ? "↘" : isUp ? "↗" : "→";

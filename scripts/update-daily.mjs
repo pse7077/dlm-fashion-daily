@@ -610,7 +610,13 @@ if (!arrayMatch) throw new Error("Could not parse data/issues.js");
 const issues = Function(`"use strict"; return (${arrayMatch[1]});`)();
 const existingIssue = issues.find((item) => item.date === date);
 if (existingIssue && !FORCE_REGENERATE) {
-  console.log(`Briefing for ${date} already exists. Skipping regeneration to preserve archive/search consistency.`);
+  const weeklySignals = await fetchWeeklySignals();
+  await fs.writeFile(
+    path.join(ROOT, "data", "signals.js"),
+    `window.DLM_FASHION_SIGNALS = ${JSON.stringify(weeklySignals, null, 2)};\n`,
+    "utf8",
+  );
+  console.log(`Briefing for ${date} already exists. Preserved archive and refreshed weather/exchange signals.`);
   process.exit(0);
 }
 
