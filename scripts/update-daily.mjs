@@ -93,6 +93,9 @@ const ARTICLE_LIMIT = 6;
 const LOOKBACK_DAYS = 3;
 
 const queries = [
+  "세정 한성 형지 인동 패션 브랜드",
+  "올포유 웰메이드 올리비아로렌 크로커다일레이디",
+  "폴로 랄프로렌 마시모듀띠 패션 유통",
   "어덜트 캐주얼 패션 브랜드 유통",
   "국내 패션 업계 브랜드 유통",
   "한국 패션 플랫폼 투자 실적",
@@ -130,6 +133,30 @@ const similarBrandKeywords = [
   "닥스",
   "헤지스",
   "빈폴",
+];
+
+const internalCompanyKeywords = [
+  "세정",
+  "한성",
+  "형지",
+  "인동",
+];
+
+const internalBrandKeywords = [
+  "올포유",
+  "웰메이드",
+  "올리비아로렌",
+  "크로커다일레이디",
+];
+
+const executiveInterestBrandKeywords = [
+  "폴로랄프로렌",
+  "폴로 랄프로렌",
+  "polo ralph lauren",
+  "ralph lauren",
+  "마시모듀띠",
+  "마시모 두띠",
+  "massimo dutti",
 ];
 
 const marketTrendKeywords = [
@@ -683,6 +710,15 @@ function priorityScore(item) {
   for (const keyword of similarBrandKeywords) {
     if (text.includes(keyword.toLowerCase())) score += 45;
   }
+  for (const keyword of internalCompanyKeywords) {
+    if (text.includes(keyword.toLowerCase())) score += 65;
+  }
+  for (const keyword of internalBrandKeywords) {
+    if (text.includes(keyword.toLowerCase())) score += 70;
+  }
+  for (const keyword of executiveInterestBrandKeywords) {
+    if (text.includes(keyword.toLowerCase())) score += 55;
+  }
   const hasMarketTrend = marketTrendKeywords.some((keyword) => text.includes(keyword.toLowerCase()));
   const hasStoreOpening = storeOpeningKeywords.some((keyword) => text.includes(keyword.toLowerCase()));
   if (hasMarketTrend) {
@@ -732,6 +768,8 @@ const articleContext = candidates
   .join("\n\n");
 
 const prompt = `
+내부 우선순위: 세정, 한성, 형지, 인동 관련 기사와 올포유, 웰메이드, 올리비아로렌, 크로커다일레이디 관련 기사, 폴로랄프로렌과 마시모듀띠 관련 기사는 우선 검토한다.
+단, 이 내부 우선순위 목록을 공개 제목, 요약, 영향 문구에 기준처럼 나열하지 않는다. 해당 기업명이나 브랜드명은 원문 기사에 실제로 등장하고 기사 맥락상 자연스러울 때만 사용한다.
 오늘 날짜는 ${date}, 한국 시간 기준이다.
 아래는 최근 3일 이내 국내 패션 산업 관련 뉴스 후보이다.
 
