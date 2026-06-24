@@ -208,14 +208,42 @@ function stripTags(value = "") {
   return decodeXml(value).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 
+const publisherTailNames = [
+  "chosunbiz",
+  "chosun biz",
+  "news1",
+  "news 1",
+  "yonhap",
+  "yna",
+  "fashionbiz",
+  "fashion biz",
+  "fashionn",
+  "apparelnews",
+  "apparel news",
+  "ktnews",
+  "kt news",
+  "the fashion post",
+];
+
+function removePublisherTail(value = "") {
+  const cleaned = String(value || "").replace(/\s+/g, " ").trim();
+  const match = cleaned.match(/\s*(?:[-|\u2013\u2014:\uFF1A])\s*([^|]{1,48})$/);
+  if (!match) return cleaned;
+
+  const tail = match[1].trim().toLowerCase();
+  const isKnownPublisher = publisherTailNames.some((name) => tail === name || tail.includes(name));
+  const looksLikePublisher = /(?:news|daily|times|journal|post|biz|media|press|일보|경제|신문|방송|뉴스|비즈)$/i.test(tail);
+  return isKnownPublisher || looksLikePublisher ? cleaned.slice(0, match.index).trim() : cleaned;
+}
+
 function cleanArticleTitle(value = "") {
-  return stripTags(value)
+  return removePublisherTail(stripTags(value)
     .replace(/\[[^\]]*(기자|뉴스|신문)[^\]]*\]\s*/g, "")
     .replace(/\s*[-–—|:：]\s*(어패럴뉴스|한국섬유신문|패션비즈|패션인사이트|이투데이|매일경제|한국경제|서울경제|헤럴드경제|파이낸셜뉴스|뉴시스|뉴스1|조선비즈|머니투데이|아시아경제|문화일보|연합뉴스|테넌트뉴스|tenant\s*news|ktnews|뉴스|신문)\s*$/i, "")
     .replace(/\s*[-|]\s*[a-z0-9.-]+\.(com|co\.kr|kr|net|org)\s*$/i, "")
     .replace(/\s*[-–—|:：]\s*[^-|:：]{1,24}(뉴스|신문|경제|일보|투데이|저널)\s*$/i, "")
     .replace(/\s+/g, " ")
-    .trim();
+    .trim());
 }
 
 function publicTitle(value = "") {
@@ -411,6 +439,9 @@ function isUsableArticleImage(url = "") {
     const parsed = new URL(url);
     if (/googleusercontent\.com$/i.test(parsed.hostname)) return false;
     if (/news\.google\.com$/i.test(parsed.hostname)) return false;
+    // Small list thumbnails look visibly soft in the hero and cards. Prefer the
+    // article's own Open Graph image, and show no image when that is unavailable.
+    if (/(?:^|[\/_-])thumb(?:nail)?(?:[\/_-]|$)|[_-]v(?:120|150|200)(?:\D|$)|[?&](?:w|width|size)=?(?:120|150|160|180|200)(?:\D|$)/i.test(`${parsed.pathname}${parsed.search}`)) return false;
     return true;
   } catch {
     return false;
@@ -968,7 +999,9 @@ function normalizeBriefingArticles(articles) {
 
     return {
       ...article,
-      title: cleanTitle || publicTitle(article.title),
+      // The model can occasionally reattach a publisher name even after the
+      // source title was cleaned, so enforce the public-title rule last.
+      title: publicTitle(cleanTitle || article.title || candidate?.title),
       summary: cleanSummaryText(article.summary || candidate?.description || cleanTitle),
       summaryBullets: Array.isArray(article.summaryBullets) && article.summaryBullets.length >= 3
         ? article.summaryBullets.map(cleanSummaryText).filter(Boolean).slice(0, 3)
