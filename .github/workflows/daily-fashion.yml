@@ -1,8 +1,10 @@
-name: Update Fashion Daily
+﻿name: Update Fashion Daily
 
 on:
   schedule:
-    - cron: "0 23 * * 0-4"
+    # GitHub Actions cron uses UTC. 22:50 UTC Sunday-Thursday = 07:50 KST Monday-Friday.
+    # Using :50 avoids the heavier top-of-hour queue, so the site should update closer to the intended morning time.
+    - cron: "50 22 * * 0-4"
   workflow_dispatch:
     inputs:
       target_date:
@@ -45,7 +47,7 @@ jobs:
         env:
           TARGET_DATE: ${{ inputs.target_date }}
         run: |
-          echo "DLM workflow v10: briefing weather exchange at 08 KST"
+          echo "DLM workflow v11: scheduled at 07:50 KST"
           if git diff --quiet && git diff --cached --quiet && [ -z "$(git ls-files --others --exclude-standard)" ]; then
             echo "No changes to commit."
             exit 0
