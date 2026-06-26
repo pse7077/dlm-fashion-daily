@@ -1,7 +1,7 @@
 window.DLM_FASHION_SIGNALS = {
-  "updatedAt": "2026-06-25T23:59:48.439Z",
-  "weather": "서울 21~32℃ 흐름, 주간 최대 강수확률 35%",
-  "exchange": "USD/KRW 환율 정보를 확인하지 못했습니다.",
+  "updatedAt": "2026-06-26T00:00:00.000Z",
+  "weather": "서울 주간 날씨",
+  "exchange": "USD/KRW 1,549원, 1주 전 대비 0.0원 보합",
   "forecast": [
     {
       "date": "2026-06-26",
@@ -9,7 +9,7 @@ window.DLM_FASHION_SIGNALS = {
       "icon": "🌤️",
       "max": 28,
       "min": 18,
-      "rain": 27
+      "rain": 0
     },
     {
       "date": "2026-06-27",
@@ -25,7 +25,7 @@ window.DLM_FASHION_SIGNALS = {
       "icon": "🌦️",
       "max": 33,
       "min": 20,
-      "rain": 35
+      "rain": 0
     },
     {
       "date": "2026-06-29",
@@ -33,7 +33,7 @@ window.DLM_FASHION_SIGNALS = {
       "icon": "🌧️",
       "max": 32,
       "min": 22,
-      "rain": 35
+      "rain": 0
     },
     {
       "date": "2026-06-30",
@@ -41,7 +41,7 @@ window.DLM_FASHION_SIGNALS = {
       "icon": "🌦️",
       "max": 31,
       "min": 21,
-      "rain": 19
+      "rain": 0
     },
     {
       "date": "2026-07-01",
@@ -49,7 +49,7 @@ window.DLM_FASHION_SIGNALS = {
       "icon": "☁️",
       "max": 33,
       "min": 22,
-      "rain": 25
+      "rain": 0
     },
     {
       "date": "2026-07-02",
@@ -57,7 +57,7 @@ window.DLM_FASHION_SIGNALS = {
       "icon": "🌦️",
       "max": 34,
       "min": 24,
-      "rain": 33
+      "rain": 0
     }
   ]
 };
