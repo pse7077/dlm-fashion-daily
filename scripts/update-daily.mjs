@@ -7,6 +7,8 @@ const MODEL = process.env.GITHUB_MODEL || "openai/gpt-4.1-mini";
 const TOKEN = process.env.GITHUB_TOKEN;
 const API_VERSION = "2026-03-10";
 const FORCE_REGENERATE = /^(1|true|yes)$/i.test(process.env.FORCE_REGENERATE || "");
+const REQUEST_TIMEOUT_MS = 12000;
+const ARTICLE_FETCH_CONCURRENCY = 6;
 
 if (!TOKEN) {
   throw new Error("GITHUB_TOKEN is required.");
@@ -19,14 +21,19 @@ function sleep(ms) {
 async function fetchWithRetry(url, options = {}, retries = 3) {
   let lastError;
   for (let attempt = 0; attempt < retries; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
-      const response = await fetch(url, options);
+      const response = await fetch(url, { ...options, signal: controller.signal });
       if (response.ok || (response.status >= 400 && response.status < 500)) {
+        clearTimeout(timeout);
         return response;
       }
       lastError = new Error(`HTTP ${response.status} for ${url}`);
     } catch (error) {
       lastError = error;
+    } finally {
+      clearTimeout(timeout);
     }
     await sleep(800 * (attempt + 1));
   }
@@ -36,6 +43,20 @@ async function fetchWithRetry(url, options = {}, retries = 3) {
 async function settledFlat(promises) {
   const results = await Promise.allSettled(promises);
   return results.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
+}
+
+async function mapLimit(items, limit, worker) {
+  const results = [];
+  let index = 0;
+  async function run() {
+    while (index < items.length) {
+      const current = index;
+      index += 1;
+      results[current] = await worker(items[current], current);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, run));
+  return results;
 }
 
 const now = new Date();
@@ -480,6 +501,20 @@ function isLowResolutionImage(url = "") {
   }
 }
 
+function imageQualityScore(url = "") {
+  try {
+    const parsed = new URL(url);
+    const target = `${parsed.hostname}${parsed.pathname}${parsed.search}`.toLowerCase();
+    let score = 0;
+    if (/\/news\/photo\//i.test(target)) score += 100;
+    if (/\.(?:jpe?g|png|webp)(?:$|\?)/i.test(target)) score += 20;
+    if (isLowResolutionImage(url)) score -= 25;
+    return score;
+  } catch {
+    return 0;
+  }
+}
+
 function imageKey(url = "") {
   try {
     const parsed = new URL(url);
@@ -514,13 +549,16 @@ async function fetchFeed(query) {
     const sourceMatch = block.match(/<source[^>]*>([\s\S]*?)<\/source>/i);
     const mediaMatch = block.match(/<(?:media:content|media:thumbnail|enclosure)\b[^>]*(?:url|href)=["']([^"']+)["'][^>]*>/i);
     const descriptionImageMatch = getTag(block, "description").match(/<img\b[^>]*src=["']([^"']+)["']/i);
+    const articleUrl = stripTags(getTag(block, "link"));
+    const rawImage = mediaMatch ? decodeXml(mediaMatch[1]) : descriptionImageMatch ? decodeXml(descriptionImageMatch[1]) : "";
+    const imageUrl = rawImage ? absolutizeUrl(rawImage, articleUrl || url) : "";
     return {
       title: stripTags(getTag(block, "title")),
-      url: stripTags(getTag(block, "link")),
+      url: articleUrl,
       publishedAt: getTag(block, "pubDate"),
       source: sourceMatch ? stripTags(sourceMatch[1]) : "",
       description: stripTags(getTag(block, "description")),
-      imageUrl: mediaMatch ? decodeXml(mediaMatch[1]) : descriptionImageMatch ? decodeXml(descriptionImageMatch[1]) : "",
+      imageUrl: isUsableArticleImage(imageUrl) ? imageUrl : "",
     };
   });
 }
@@ -652,7 +690,7 @@ function pageImageCandidates(html, baseUrl) {
 
 function pageImage(html, baseUrl) {
   const candidates = pageImageCandidates(html, baseUrl);
-  return candidates.find((image) => !isLowResolutionImage(image)) || candidates[0] || "";
+  return candidates.sort((a, b) => imageQualityScore(b) - imageQualityScore(a))[0] || "";
 }
 
 async function fetchArticleDetails(link, source) {
@@ -676,7 +714,7 @@ async function fetchDirectSource({ homeUrl, source, patterns, limit = 12 }) {
   try {
     const { html } = await fetchHtml(homeUrl);
     const links = extractLinks(html, homeUrl, patterns).slice(0, limit);
-    const articles = await Promise.all(links.map((link) => fetchArticleDetails(link, source)));
+    const articles = await mapLimit(links, ARTICLE_FETCH_CONCURRENCY, (link) => fetchArticleDetails(link, source));
     return articles.filter(Boolean);
   } catch {
     return [];
@@ -1144,6 +1182,19 @@ function imageForIssue(image) {
   return image;
 }
 
+async function fetchCurrencyApiUsdKrw(targetDate = "latest") {
+  const version = targetDate === "latest" ? "latest" : targetDate;
+  const response = await fetchWithRetry(
+    `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${version}/v1/currencies/usd.json`,
+    {},
+    2,
+  );
+  if (!response.ok) return null;
+  const json = await response.json();
+  const rate = json.usd?.krw;
+  return Number.isFinite(rate) ? rate : null;
+}
+
 async function fetchWeeklySignals() {
   const signals = {
     updatedAt,
@@ -1215,6 +1266,25 @@ async function fetchWeeklySignals() {
     }
   } catch {
     // Keep fallback text.
+  }
+
+  if (!/USD\/KRW\s+[\d,]+/.test(signals.exchange)) {
+    try {
+      const previous = new Date(`${date}T00:00:00+09:00`);
+      previous.setDate(previous.getDate() - 7);
+      const previousDate = kstDateString(previous);
+      const [latestRate, beforeRate] = await Promise.all([
+        fetchCurrencyApiUsdKrw("latest"),
+        fetchCurrencyApiUsdKrw(previousDate),
+      ]);
+      if (Number.isFinite(latestRate) && Number.isFinite(beforeRate)) {
+        const diff = latestRate - beforeRate;
+        const direction = diff > 0 ? "상승" : diff < 0 ? "하락" : "보합";
+        signals.exchange = `USD/KRW ${Math.round(latestRate).toLocaleString("ko-KR")}원, 1주 전 대비 ${Math.abs(diff).toFixed(1)}원 ${direction}`;
+      }
+    } catch {
+      // Try current-rate fallback below.
+    }
   }
 
   if (!/USD\/KRW\s+[\d,]+/.test(signals.exchange)) {
