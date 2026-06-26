@@ -1,7 +1,7 @@
 window.DLM_FASHION_SIGNALS = {
-  "updatedAt": "2026-06-26T00:00:00.000Z",
+  "updatedAt": "2026-06-26T01:17:00.000Z",
   "weather": "서울 주간 날씨",
-  "exchange": "USD/KRW 1,549원, 1주 전 대비 0.0원 보합",
+  "exchange": "USD/KRW 1,549원, 1주 전 대비 18.7원 상승",
   "forecast": [
     {
       "date": "2026-06-26",

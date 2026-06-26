@@ -1195,6 +1195,34 @@ async function fetchCurrencyApiUsdKrw(targetDate = "latest") {
   return Number.isFinite(rate) ? rate : null;
 }
 
+function formatExchangeSignal(latestRate, beforeRate) {
+  if (!Number.isFinite(latestRate) || !Number.isFinite(beforeRate)) return "";
+  const diff = latestRate - beforeRate;
+  const direction = Math.abs(diff) < 0.05 ? "보합" : diff > 0 ? "상승" : "하락";
+  return `USD/KRW ${Math.round(latestRate).toLocaleString("ko-KR")}원, 1주 전 대비 ${Math.abs(diff).toFixed(1)}원 ${direction}`;
+}
+
+async function fetchFrankfurterUsdKrwPair(previousDate) {
+  const [latestResponse, previousResponse] = await Promise.all([
+    fetchWithRetry("https://api.frankfurter.app/latest?from=USD&to=KRW", {}, 2),
+    fetchWithRetry(`https://api.frankfurter.app/${previousDate}?from=USD&to=KRW`, {}, 2),
+  ]);
+  if (!latestResponse.ok || !previousResponse.ok) return null;
+  const latest = await latestResponse.json();
+  const before = await previousResponse.json();
+  const latestRate = latest.rates?.KRW;
+  const beforeRate = before.rates?.KRW;
+  return Number.isFinite(latestRate) && Number.isFinite(beforeRate) ? { latestRate, beforeRate } : null;
+}
+
+async function fetchCurrencyApiUsdKrwPair(previousDate) {
+  const [latestRate, beforeRate] = await Promise.all([
+    fetchCurrencyApiUsdKrw("latest"),
+    fetchCurrencyApiUsdKrw(previousDate),
+  ]);
+  return Number.isFinite(latestRate) && Number.isFinite(beforeRate) ? { latestRate, beforeRate } : null;
+}
+
 async function fetchWeeklySignals() {
   const signals = {
     updatedAt,
@@ -1245,60 +1273,20 @@ async function fetchWeeklySignals() {
     // Keep fallback text.
   }
 
-  try {
-    const previous = new Date(`${date}T00:00:00+09:00`);
-    previous.setDate(previous.getDate() - 7);
-    const previousDate = kstDateString(previous);
-    const [latestResponse, previousResponse] = await Promise.all([
-      fetchWithRetry("https://api.frankfurter.app/latest?from=USD&to=KRW", {}, 2),
-      fetchWithRetry(`https://api.frankfurter.app/${previousDate}?from=USD&to=KRW`, {}, 2),
-    ]);
-    if (latestResponse.ok && previousResponse.ok) {
-      const latest = await latestResponse.json();
-      const before = await previousResponse.json();
-      const latestRate = latest.rates?.KRW;
-      const beforeRate = before.rates?.KRW;
-      if (Number.isFinite(latestRate) && Number.isFinite(beforeRate)) {
-        const diff = latestRate - beforeRate;
-        const direction = diff > 0 ? "상승" : diff < 0 ? "하락" : "보합";
-        signals.exchange = `USD/KRW ${Math.round(latestRate).toLocaleString("ko-KR")}원, 1주 전 대비 ${Math.abs(diff).toFixed(1)}원 ${direction}`;
-      }
-    }
-  } catch {
-    // Keep fallback text.
-  }
+  const previous = new Date(`${date}T00:00:00+09:00`);
+  previous.setDate(previous.getDate() - 7);
+  const previousDate = kstDateString(previous);
 
-  if (!/USD\/KRW\s+[\d,]+/.test(signals.exchange)) {
+  for (const provider of [fetchFrankfurterUsdKrwPair, fetchCurrencyApiUsdKrwPair]) {
     try {
-      const previous = new Date(`${date}T00:00:00+09:00`);
-      previous.setDate(previous.getDate() - 7);
-      const previousDate = kstDateString(previous);
-      const [latestRate, beforeRate] = await Promise.all([
-        fetchCurrencyApiUsdKrw("latest"),
-        fetchCurrencyApiUsdKrw(previousDate),
-      ]);
-      if (Number.isFinite(latestRate) && Number.isFinite(beforeRate)) {
-        const diff = latestRate - beforeRate;
-        const direction = diff > 0 ? "상승" : diff < 0 ? "하락" : "보합";
-        signals.exchange = `USD/KRW ${Math.round(latestRate).toLocaleString("ko-KR")}원, 1주 전 대비 ${Math.abs(diff).toFixed(1)}원 ${direction}`;
+      const pair = await provider(previousDate);
+      const exchange = pair ? formatExchangeSignal(pair.latestRate, pair.beforeRate) : "";
+      if (exchange) {
+        signals.exchange = exchange;
+        break;
       }
     } catch {
-      // Try current-rate fallback below.
-    }
-  }
-
-  if (!/USD\/KRW\s+[\d,]+/.test(signals.exchange)) {
-    try {
-      const response = await fetchWithRetry("https://open.er-api.com/v6/latest/USD", {}, 2);
-      if (response.ok) {
-        const json = await response.json();
-        const latestRate = json.rates?.KRW;
-        if (Number.isFinite(latestRate)) {
-          signals.exchange = `USD/KRW ${Math.round(latestRate).toLocaleString("ko-KR")}원, 1주 변동 확인 중`;
-        }
-      }
-    } catch {
-      // Keep fallback text.
+      // Try the next provider.
     }
   }
 
