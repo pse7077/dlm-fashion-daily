@@ -328,10 +328,10 @@ function sentenceParts(value = "") {
 
 function conciseBullet(value = "", fallback = "") {
   const cleaned = cleanSummaryText(value);
-  const candidate = cleaned.length <= 45 ? cleaned : "";
+  const candidate = cleaned.length <= 100 ? cleaned : "";
   if (candidate && /[.?!다요임됨함습니다]$/.test(candidate)) return candidate;
 
-  const sentence = sentenceParts(cleaned).find((part) => part.length <= 45);
+  const sentence = sentenceParts(cleaned).find((part) => part.length <= 100);
   if (sentence) return sentence;
 
   return fallback;
@@ -350,7 +350,7 @@ function fallbackSummaryBullets(item) {
   ];
   return [...new Set(bullets)]
     .map((bullet) => cleanSummaryText(bullet))
-    .filter((bullet) => bullet.length <= 45)
+    .filter((bullet) => bullet.length <= 100)
     .slice(0, 3);
 }
 
@@ -946,7 +946,7 @@ leadHeadline과 각 기사 title 끝에는 언론사명, 출처명, 사이트명
 기사에 없는 사실이나 숫자를 만들지 마라. 제목과 출처 정보만으로 확신할 수 없는 내용은 단정하지 마라.
 각 기사에는 본문을 길게 붙이지 말고, 핵심 내용만 3개의 짧은 bullet로 요약하라.
 summaryBullets는 반드시 3개를 작성하라.
-summaryBullets는 각 항목 45자 이하의 완결된 한국어 문장으로 작성하라.
+summaryBullets는 각 항목 100자 이하의 완결된 한국어 문장으로 작성하라.
 summaryBullets는 문장 중간에서 끊기면 안 된다. 확실하지 않으면 짧은 완결문으로 다시 써라.
 기사 본문 일부를 그대로 길게 복사하지 말고, 핵심 사실을 짧게 재작성하라.
 HTML 엔티티, &nbsp;, 언론사명 꼬리, 기자명, 출처명은 모든 공개 문장에 넣지 마라.
