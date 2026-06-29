@@ -316,22 +316,51 @@ function cleanSummaryText(value = "") {
 function sentenceParts(value = "") {
   const cleaned = cleanSummaryText(value);
   if (!cleaned) return [];
-  return cleaned
-    .split(/(?<=[.!?。！？다])\s+/)
+  const spaced = cleaned
+    .replace(/([.!?。！？])(?=[^\s])/g, "$1 ")
+    .replace(/(다\.?)(?=[가-힣A-Z0-9])/g, "$1 ");
+  return spaced
+    .split(/(?<=[.!?。！？])\s+|(?<=다)\s+/)
     .map((item) => item.replace(/^[·•\-\s]+/, "").trim())
     .filter((item) => item.length >= 8)
     .slice(0, 6);
 }
 
+function conciseBullet(value = "", fallback = "") {
+  const cleaned = cleanSummaryText(value);
+  const candidate = cleaned.length <= 45 ? cleaned : "";
+  if (candidate && /[.?!다요임됨함습니다]$/.test(candidate)) return candidate;
+
+  const sentence = sentenceParts(cleaned).find((part) => part.length <= 45);
+  if (sentence) return sentence;
+
+  return fallback;
+}
+
 function fallbackSummaryBullets(item) {
-  const parts = sentenceParts(item.description || item.summary || item.title);
-  const bullets = parts.slice(0, 3);
-  while (bullets.length < 3) {
-    if (bullets.length === 0) bullets.push(`${publicTitle(item.title)} 관련 소식이 업계 주요 이슈로 확인됐습니다.`);
-    else if (bullets.length === 1) bullets.push("브랜드 운영과 유통 전략 관점에서 추가 확인할 만한 내용입니다.");
-    else bullets.push("세부 수치와 맥락은 원문 기사 확인이 필요합니다.");
-  }
-  return bullets.map((bullet) => cleanSummaryText(bullet)).slice(0, 3);
+  const title = publicTitle(item.title);
+  const parts = sentenceParts(item.description || item.summary || item.title)
+    .map((part) => conciseBullet(part, ""))
+    .filter(Boolean);
+  const bullets = [
+    ...parts,
+    `${title} 관련 이슈가 확인됐습니다.`,
+    "상품과 유통 전략 관점에서 볼 만합니다.",
+    "원문에서 세부 수치와 맥락을 확인하세요.",
+  ];
+  return [...new Set(bullets)]
+    .map((bullet) => cleanSummaryText(bullet))
+    .filter((bullet) => bullet.length <= 45)
+    .slice(0, 3);
+}
+
+function normalizeSummaryBullets(article) {
+  const rawBullets = Array.isArray(article.summaryBullets) ? article.summaryBullets : [];
+  const cleaned = rawBullets
+    .map((bullet) => conciseBullet(bullet, ""))
+    .filter(Boolean)
+    .slice(0, 3);
+  return [...cleaned, ...fallbackSummaryBullets(article)].slice(0, 3);
 }
 
 function articleKey(value = "") {
@@ -916,7 +945,10 @@ leadHeadline과 각 기사 title 끝에는 언론사명, 출처명, 사이트명
 개별 브랜드가 특정 매장에 입점했다는 내용만 있는 후보는 중요도가 매우 높지 않으면 선택하지 마라.
 기사에 없는 사실이나 숫자를 만들지 마라. 제목과 출처 정보만으로 확신할 수 없는 내용은 단정하지 마라.
 각 기사에는 본문을 길게 붙이지 말고, 핵심 내용만 3개의 짧은 bullet로 요약하라.
-summaryBullets는 각 항목 35자 이상 90자 이하의 한국어 문장으로 작성하라.
+summaryBullets는 반드시 3개를 작성하라.
+summaryBullets는 각 항목 45자 이하의 완결된 한국어 문장으로 작성하라.
+summaryBullets는 문장 중간에서 끊기면 안 된다. 확실하지 않으면 짧은 완결문으로 다시 써라.
+기사 본문 일부를 그대로 길게 복사하지 말고, 핵심 사실을 짧게 재작성하라.
 HTML 엔티티, &nbsp;, 언론사명 꼬리, 기자명, 출처명은 모든 공개 문장에 넣지 마라.
 반드시 입력 목록의 링크를 그대로 사용하라.
 
@@ -1385,10 +1417,7 @@ const issueHeadlines = enrichedArticles
 
 const articleCards = enrichedArticles
   .map((article) => {
-    const summaryBullets = (Array.isArray(article.summaryBullets) && article.summaryBullets.length
-      ? article.summaryBullets
-      : fallbackSummaryBullets(article)
-    ).slice(0, 3);
+    const summaryBullets = normalizeSummaryBullets(article);
     return `
       <article>
         <div class="meta">${escapeHtml(article.category)} · ${escapeHtml(article.publishedAt)}</div>
