@@ -82,7 +82,14 @@
       font-size: 11px;
       letter-spacing: .08em;
     }
-    .weather-summary { display: none; }
+    .weather-summary {
+      display: none;
+      margin-bottom: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .weather-summary.visible { display: block; }
     .weather-strip {
       display: grid;
       grid-template-columns: repeat(7, minmax(52px, 1fr));
@@ -205,7 +212,7 @@
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 20px;
-      padding-bottom: 80px;
+      padding-bottom: 28px;
     }
     .card {
       overflow: hidden;
@@ -275,6 +282,40 @@
       color: #666a72;
       font-size: 11px;
     }
+    .pagination {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 0 80px;
+    }
+    .page-btn {
+      min-width: 38px;
+      height: 38px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: background .18s ease, border-color .18s ease, color .18s ease;
+    }
+    .page-btn:hover {
+      border-color: #c9ccd4;
+      background: var(--soft);
+    }
+    .page-btn.active {
+      border-color: var(--blue);
+      background: var(--blue);
+      color: #fff;
+    }
+    .page-btn:disabled {
+      cursor: default;
+      opacity: .38;
+    }
     .empty { display: none; padding: 48px 0 80px; color: var(--muted); }
     footer {
       border-top: 1px solid var(--line);
@@ -292,6 +333,12 @@
       h1 { font-size: clamp(38px, 12vw, 58px); }
       .controls { grid-template-columns: 1fr; }
       .grid { grid-template-columns: 1fr; }
+      .pagination {
+        justify-content: flex-start;
+        overflow-x: auto;
+        padding-bottom: 64px;
+      }
+      .page-btn { flex: 0 0 auto; }
       .thumb { height: 58vw; min-height: 240px; max-height: 360px; }
     }
   </style>
@@ -338,6 +385,7 @@
         <span id="count">0개 브리핑</span>
       </div>
       <div class="grid" id="archive"></div>
+      <nav class="pagination" id="pagination" aria-label="브리핑 페이지"></nav>
       <div class="empty" id="empty">조건에 맞는 브리핑이 없습니다.</div>
     </section>
   </main>
@@ -350,6 +398,7 @@
   <script src="data/signals.js"></script>
   <script>
     const archive = document.querySelector("#archive");
+    const pagination = document.querySelector("#pagination");
     const search = document.querySelector("#search");
     const month = document.querySelector("#month");
     const count = document.querySelector("#count");
@@ -360,6 +409,8 @@
     const exchangeSignal = document.querySelector("#exchange-signal");
     const exchangeCard = document.querySelector("#exchange-card");
     const weatherForecast = document.querySelector("#weather-forecast");
+    const PAGE_SIZE = 9;
+    let currentPage = 1;
 
     function toKstDate(date = new Date()) {
       return new Intl.DateTimeFormat("en-CA", {
@@ -431,8 +482,12 @@
           return !query || haystack.includes(query);
         })
         .sort((a, b) => b.date.localeCompare(a.date));
+      const totalPages = Math.max(1, Math.ceil(issues.length / PAGE_SIZE));
+      currentPage = Math.min(currentPage, totalPages);
+      const pageStart = (currentPage - 1) * PAGE_SIZE;
+      const visibleIssues = issues.slice(pageStart, pageStart + PAGE_SIZE);
 
-      archive.innerHTML = issues.map((issue) => {
+      archive.innerHTML = visibleIssues.map((issue) => {
         const image = issueImage(issue, usedImages);
         return `
           <a class="card ${image ? "" : "no-image"}" href="${issue.url}">
@@ -451,6 +506,7 @@
 
       count.textContent = `${issues.length}개 브리핑`;
       empty.style.display = issues.length ? "none" : "block";
+      renderPagination(totalPages);
 
       const latest = window.FASHION_DAILY_ISSUES
         .slice()
@@ -465,6 +521,27 @@
       }
     }
 
+    function renderPagination(totalPages) {
+      if (!pagination) return;
+      if (totalPages <= 1) {
+        pagination.style.display = "none";
+        pagination.innerHTML = "";
+        return;
+      }
+
+      pagination.style.display = "flex";
+      const pageButtons = Array.from({ length: totalPages }, (_, index) => {
+        const page = index + 1;
+        return `<button class="page-btn${page === currentPage ? " active" : ""}" type="button" data-page="${page}" aria-current="${page === currentPage ? "page" : "false"}">${page}</button>`;
+      }).join("");
+
+      pagination.innerHTML = `
+        <button class="page-btn" type="button" data-page="${currentPage - 1}" ${currentPage === 1 ? "disabled" : ""} aria-label="이전 페이지">‹</button>
+        ${pageButtons}
+        <button class="page-btn" type="button" data-page="${currentPage + 1}" ${currentPage === totalPages ? "disabled" : ""} aria-label="다음 페이지">›</button>
+      `;
+    }
+
     function renderWeatherForecast(days = []) {
       if (!weatherForecast) return;
       const today = toKstDate();
@@ -472,6 +549,13 @@
         .filter((day) => !day.date || day.date >= today)
         .slice(0, 7);
       const visibleDays = upcoming.length ? upcoming : days.slice(0, 7);
+      const signalsDate = window.DLM_FASHION_SIGNALS?.updatedAt
+        ? toKstDate(new Date(window.DLM_FASHION_SIGNALS.updatedAt))
+        : "";
+      if (signalsDate && signalsDate < today) {
+        weatherSignal.textContent = `서울 주간 날씨 · 업데이트 확인 필요 (${signalsDate})`;
+        weatherSignal.classList.add("visible");
+      }
       weatherForecast.innerHTML = visibleDays.map((day, index) => `
         <div class="weather-day${index === 0 ? " today" : ""}">
           <strong>${day.day || ""}</strong>
@@ -508,8 +592,15 @@
       `;
     }
 
-    search.addEventListener("input", render);
-    month.addEventListener("change", render);
+    search.addEventListener("input", () => { currentPage = 1; render(); });
+    month.addEventListener("change", () => { currentPage = 1; render(); });
+    pagination.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-page]");
+      if (!button || button.disabled) return;
+      currentPage = Number(button.dataset.page);
+      render();
+      archive.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
 
     if (window.DLM_FASHION_SIGNALS) {
       weatherSignal.textContent = window.DLM_FASHION_SIGNALS.weather || weatherSignal.textContent;
