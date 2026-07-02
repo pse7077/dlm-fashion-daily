@@ -269,12 +269,12 @@ const publisherTailNames = [
 
 function removePublisherTail(value = "") {
   const cleaned = String(value || "").replace(/\s+/g, " ").trim();
-  const match = cleaned.match(/\s*(?:[-|\u2013\u2014:\uFF1A])\s*([^|]{1,48})$/);
+  const match = cleaned.match(/\s*(?:[-|\u2013\u2014:\uFF1A])\s*([^|]{1,80})$/);
   if (!match) return cleaned;
 
   const tail = match[1].trim().toLowerCase();
   const isKnownPublisher = publisherTailNames.some((name) => tail === name || tail.includes(name));
-  const looksLikePublisher = /(?:news|daily|times|journal|post|biz|media|press|일보|경제|신문|방송|뉴스|비즈)$/i.test(tail);
+  const looksLikePublisher = /(?:news|daily|times|journal|post|biz|media|press|일보|경제|신문|방송|뉴스|비즈|인사이트|섬유신문)$/i.test(tail);
   return isKnownPublisher || looksLikePublisher ? cleaned.slice(0, match.index).trim() : cleaned;
 }
 
@@ -292,7 +292,8 @@ function publicTitle(value = "") {
   return cleanArticleTitle(value)
     .replace(/^(독립문|PAT|피에이티)\s*(관점|유사|관련)?\s*[-–—|:：,]?\s*/i, "")
     .replace(/^(PAT\s*유사|피에이티\s*유사)\s*/i, "")
-    .replace(/^(어덜트\s*캐주얼|중장년\s*캐주얼)\s*[-–—|:：,]?\s*/i, "")
+    .replace(/^(어덜트\s*캐주얼|중장년\s*캐주얼|유사\s*브랜드)\s*[-–—|:：,]?\s*/i, "")
+    .replace(/\s*[-–—|:：]\s*(firstviewkorea|fashion insight|hypebeast|무신사\s*뉴스룸|어패럴뉴스|패션비즈|패션엔|패션포스트|한국섬유신문|chosunbiz|조선비즈)\s*$/i, "")
     .replace(/\s*[-–—|:：]\s*[^-|:：]{1,24}$/i, (match) =>
       sourceTailPattern.test(match.trim().replace(/^[-–—|:：]\s*/, "").trim()) ? "" : match,
     )
@@ -303,12 +304,17 @@ function publicTitle(value = "") {
 function cleanSummaryText(value = "") {
   return stripTags(value)
     .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&quot;/gi, "\"")
+    .replace(/&[a-z]+;/gi, " ")
     .replace(/\u00a0/g, " ")
     .replace(/\[[^\]]*(기자|뉴스|신문)[^\]]*\]\s*/g, "")
     .replace(/\s*[-–—|:：]\s*(어패럴뉴스|한국섬유신문|패션비즈|패션인사이트|이투데이|매일경제|한국경제|서울경제|헤럴드경제|파이낸셜뉴스|뉴시스|뉴스1|조선비즈|머니투데이|아시아경제|문화일보|연합뉴스|테넌트뉴스|tenant\s*news|ktnews|뉴스|신문)\s*$/i, "")
     .replace(/\s*[-|]\s*[a-z0-9.-]+\.(com|co\.kr|kr|net|org)\s*$/i, "")
     .replace(/^(독립문|PAT|피에이티)\s*(관점|유사|관련)?\s*[-–—|:：,]?\s*/i, "")
-    .replace(/^(어덜트\s*캐주얼|중장년\s*캐주얼)\s*[-–—|:：,]?\s*/i, "")
+    .replace(/^(어덜트\s*캐주얼|중장년\s*캐주얼|유사\s*브랜드)\s*[-–—|:：,]?\s*/i, "")
+    .replace(/\s*[-–—|:：]\s*(firstviewkorea|fashion insight|hypebeast|무신사\s*뉴스룸|어패럴뉴스|패션비즈|패션엔|패션포스트|한국섬유신문|chosunbiz|조선비즈)\s*$/i, "")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -329,11 +335,31 @@ function sentenceParts(value = "") {
 function conciseBullet(value = "", fallback = "") {
   const cleaned = cleanSummaryText(value);
   const candidate = cleaned.length <= 100 ? cleaned : "";
-  if (candidate && /[.?!다요임됨함습니다]$/.test(candidate)) return candidate;
+  if (candidate && isCompleteKoreanSentence(candidate) && !looksTruncated(candidate)) return candidate;
 
-  const sentence = sentenceParts(cleaned).find((part) => part.length <= 100);
+  const sentence = sentenceParts(cleaned).find((part) => part.length <= 100 && isCompleteKoreanSentence(part) && !looksTruncated(part));
   if (sentence) return sentence;
 
+  return fallback;
+}
+
+function isCompleteKoreanSentence(value = "") {
+  const cleaned = cleanSummaryText(value);
+  return /[.!?。！？]$/.test(cleaned) || /(다|요|임|됨|함|했다|한다|됐다|된다|있다|없다|나섰다|밝혔다|전망이다|분석된다)$/.test(cleaned);
+}
+
+function looksTruncated(value = "") {
+  const cleaned = cleanSummaryText(value);
+  if (!cleaned) return true;
+  if (/[.…]{2,}$|…$/.test(cleaned)) return true;
+  if (/[·,，:：;；\-–—]$/.test(cleaned)) return true;
+  if (/[은는이가을를과와의]$/.test(cleaned)) return true;
+  return cleaned.length > 70 && !isCompleteKoreanSentence(cleaned);
+}
+
+function qualityBullet(value = "", fallback = "") {
+  const cleaned = conciseBullet(value, "");
+  if (cleaned && cleaned.length >= 18 && cleaned.length <= 100 && !looksTruncated(cleaned)) return cleaned;
   return fallback;
 }
 
@@ -344,20 +370,20 @@ function fallbackSummaryBullets(item) {
     .filter(Boolean);
   const bullets = [
     ...parts,
-    `${title} 관련 이슈가 확인됐습니다.`,
-    "상품과 유통 전략 관점에서 볼 만합니다.",
-    "원문에서 세부 수치와 맥락을 확인하세요.",
+    `${title} 관련 흐름이 오늘 주요 기사로 확인됐습니다.`,
+    "브랜드 운영과 상품 기획 관점에서 함께 볼 만한 이슈입니다.",
+    "유통 채널과 소비 흐름 변화에 미칠 영향을 점검할 필요가 있습니다.",
   ];
   return [...new Set(bullets)]
-    .map((bullet) => cleanSummaryText(bullet))
-    .filter((bullet) => bullet.length <= 100)
+    .map((bullet) => qualityBullet(bullet, "브랜드 운영과 유통 전략 관점에서 참고할 만한 소식입니다."))
+    .filter((bullet) => bullet.length >= 18 && bullet.length <= 100)
     .slice(0, 3);
 }
 
 function normalizeSummaryBullets(article) {
   const rawBullets = Array.isArray(article.summaryBullets) ? article.summaryBullets : [];
   const cleaned = rawBullets
-    .map((bullet) => conciseBullet(bullet, ""))
+    .map((bullet) => qualityBullet(bullet, ""))
     .filter(Boolean)
     .slice(0, 3);
   return [...cleaned, ...fallbackSummaryBullets(article)].slice(0, 3);
@@ -944,6 +970,7 @@ leadHeadline과 각 기사 title 끝에는 언론사명, 출처명, 사이트명
 leadHeadline에는 "국내 패션 업계", "주요 뉴스 업데이트", "오늘 확인할 만한 업계 소식" 같은 일반 문구를 쓰지 마라.
 leadHeadline은 오늘 선택한 6개 기사 중 가장 헤드라인이 될 만한 이슈나 공통 흐름을 한 줄로 요약하라.
 leadHeadline은 24자 이상 42자 이하의 자연스러운 한국어 제목으로 작성하라.
+leadHeadline에서 조사가 어색해질 수 있는 "A과 B이", "A와 B이", "A과 B가" 형태를 쓰지 마라. 불확실하면 "A·B 흐름이 맞물린 하루"처럼 조사 충돌이 없는 구조로 작성하라.
 상권 기사는 개별 브랜드의 단순 입점, 오픈, 팝업 소식보다 지역·권역 단위의 소비 흐름, 상권 변화, 유동인구, 유통망 분석을 우선 선택하라.
 개별 브랜드가 특정 매장에 입점했다는 내용만 있는 후보는 중요도가 매우 높지 않으면 선택하지 마라.
 기사에 없는 사실이나 숫자를 만들지 마라. 제목과 출처 정보만으로 확신할 수 없는 내용은 단정하지 마라.
@@ -952,6 +979,7 @@ summaryBullets는 반드시 3개를 작성하라.
 summaryBullets는 각 항목 100자 이하의 완결된 한국어 문장으로 작성하라.
 summaryBullets는 문장 중간에서 끊기면 안 된다. 확실하지 않으면 짧은 완결문으로 다시 써라.
 기사 본문 일부를 그대로 길게 복사하지 말고, 핵심 사실을 짧게 재작성하라.
+summaryBullets에 말줄임표, 끊긴 문장, HTML 엔티티, 제목만 반복한 문장을 넣지 마라.
 HTML 엔티티, &nbsp;, 언론사명 꼬리, 기자명, 출처명은 모든 공개 문장에 넣지 마라.
 반드시 입력 목록의 링크를 그대로 사용하라.
 
@@ -1094,8 +1122,8 @@ function fallbackLeadHeadline(articles = []) {
   }
 
   const uniqueThemes = [...new Set(themes)].slice(0, 2);
-  if (uniqueThemes.length >= 2) return `${uniqueThemes[0]}과 ${uniqueThemes[1]}이 오늘의 핵심 변수`;
-  if (uniqueThemes.length === 1) return `${uniqueThemes[0]} 중심으로 재편되는 시장 흐름`;
+  if (uniqueThemes.length >= 2) return `${uniqueThemes[0]}·${uniqueThemes[1]} 흐름이 맞물린 하루`;
+  if (uniqueThemes.length === 1) return `${uniqueThemes[0]} 흐름을 중심으로 재편되는 시장`;
 
   const leadTitle = publicTitle(articles[0]?.title || "");
   return leadTitle && !isGenericLeadHeadline(leadTitle)
@@ -1234,21 +1262,27 @@ function normalizeBriefingArticles(articles) {
       article.impact.length < 18 ||
       /관련 브랜드와 유통 전략|확인할 수 있는 소식/.test(article.impact);
 
-    return {
+    const normalizedArticle = {
       ...article,
       // The model can occasionally reattach a publisher name even after the
       // source title was cleaned, so enforce the public-title rule last.
       title: publicTitle(cleanTitle || article.title || candidate?.title),
       summary: cleanSummaryText(article.summary || candidate?.description || cleanTitle),
-      summaryBullets: Array.isArray(article.summaryBullets) && article.summaryBullets.length >= 3
-        ? article.summaryBullets.map(cleanSummaryText).filter(Boolean).slice(0, 3)
-        : fallbackSummaryBullets({ ...base, summary: article.summary }),
       impact: genericImpact ? fallbackImpact(base) : article.impact,
       category: article.category || inferCategory(base),
       source: article.source || candidate?.source || "출처 확인 필요",
       publishedAt: article.publishedAt || normalizeArticleDate(candidate?.publishedAt),
       url: article.url || candidate?.url,
     };
+    normalizedArticle.summaryBullets = normalizeSummaryBullets({
+      ...base,
+      ...normalizedArticle,
+      summaryBullets: article.summaryBullets,
+      summary: normalizedArticle.summary,
+    });
+    normalizedArticle.summary = normalizedArticle.summaryBullets[0] || normalizedArticle.summary;
+    normalizedArticle.impact = qualityBullet(normalizedArticle.impact, fallbackImpact(base));
+    return normalizedArticle;
   });
 
   const adultCandidate = candidates.find(isAdultItem);
