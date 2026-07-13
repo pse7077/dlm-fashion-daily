@@ -366,52 +366,97 @@ function qualityBullet(value = "", fallback = "") {
 function fallbackSummaryBullets(item) {
   const parts = sentenceParts(item.description || item.summary || item.title)
     .map((part) => conciseBullet(part, ""))
-    .filter((part) => part && !/관련 흐름이 오늘 주요 기사|브랜드 운영과 상품 기획|유통 채널과 소비 흐름/.test(part));
+    .filter((part) => part && !isGenericSummaryBullet(part));
   const text = `${item.title || ""} ${item.description || ""} ${item.summary || ""}`.toLowerCase();
   const contextBullets = [];
-  if (/세정|한성|형지|인동|pat|올포유|웰메이드|올리비아로렌|크로커다일레이디|인디안|데일리스트/i.test(text)) {
+
+  if (/세정|한성|형지|인동|pat|올포유|웰메이드|올리비아로렌|크로커다일레이디|인디안|데일리스트|엘리트학생복|캐리스노트/i.test(text)) {
     contextBullets.push(
-      "어덜트 캐주얼 고객층을 겨냥한 상품 구성과 가격 전략을 함께 확인할 수 있습니다.",
-      "기존 브랜드의 시즌 대응 방식과 고객 접점 운영을 비교해 볼 만한 소식입니다.",
+      "관련 브랜드의 시즌 상품 구성과 가격 전략을 함께 확인할 수 있습니다.",
+      "중장년 고객층을 겨냥한 상품 기획과 고객 접점 운영을 비교해 볼 만합니다.",
+      "기존 브랜드가 날씨와 시즌 수요에 대응하는 방식을 보여주는 사례입니다.",
     );
   }
-  if (/무신사|플랫폼|온라인|커머스|검색량|판매|기획전|특가전|세일|프로모션/i.test(text)) {
+  if (/무신사|플랫폼|온라인|커머스|검색량|판매|기획전|특가전|세일|프로모션|쿠팡|팝업|편집숍/i.test(text)) {
     contextBullets.push(
-      "온라인 채널에서 나타나는 수요 변화와 시즌 상품 반응을 살펴볼 수 있습니다.",
-      "판매 채널별 노출 방식과 프로모션 운영의 영향을 점검할 수 있습니다.",
+      "판매 채널에서 확인되는 수요 변화와 시즌 상품 반응을 살펴볼 수 있습니다.",
+      "온라인과 오프라인 접점을 연결하는 운영 방식이 눈에 띕니다.",
+      "기획전과 팝업을 통해 고객 유입을 만드는 방식이 참고됩니다.",
     );
   }
-  if (/상권|오프라인|매장|백화점|팝업|편집숍|신사|성수|명동/i.test(text)) {
+  if (/상권|오프라인|매장|백화점|팝업|편집숍|송도|성수|명동|더현대|아울렛/i.test(text)) {
     contextBullets.push(
-      "오프라인 접점과 지역 상권 흐름이 브랜드 경험에 미치는 영향을 볼 수 있습니다.",
-      "매장 구성과 고객 유입 방식의 변화가 유통 전략에 주는 시사점이 있습니다.",
+      "오프라인 접점 확대가 브랜드 경험과 지역 고객 유입에 미치는 영향을 볼 수 있습니다.",
+      "매장 구성과 입지 선택이 유통 전략에서 갖는 의미를 점검할 수 있습니다.",
     );
   }
-  if (/소재|기능성|냉감|니트|스윔웨어|아웃도어|스포츠|여름/i.test(text)) {
+  if (/소재|기능성|냉감|방수|크링클|tpu|브라|스윔웨어|아웃도어|스포츠|여름|장마/i.test(text)) {
     contextBullets.push(
-      "시즌 수요에 맞춘 소재와 기능성 상품의 반응을 확인할 수 있습니다.",
-      "여름 상품군의 기획 방향과 소비자 선택 기준을 함께 살펴볼 수 있습니다.",
+      "기능성 소재와 계절성 상품의 소비 반응을 확인할 수 있습니다.",
+      "날씨 변화에 맞춘 상품 기획 방향과 착용 편의성이 함께 부각됩니다.",
+      "여름 상품군에서 소재 차별화가 구매 선택에 미치는 영향을 보여줍니다.",
     );
   }
+  if (/ip|캐릭터|협업|애니메이션|콘텐츠|콜라보/i.test(text)) {
+    contextBullets.push(
+      "캐릭터와 콘텐츠 IP가 패션 상품의 차별화 요소로 확장되고 있습니다.",
+      "협업 상품이 신규 고객 유입과 브랜드 화제성을 만드는 방식이 드러납니다.",
+    );
+  }
+
   const bullets = [
     ...parts,
     ...contextBullets,
-    "상품 기획과 채널 운영 관점에서 참고할 만한 업계 신호입니다.",
-    "고객 수요와 시즌 대응 방향을 함께 점검할 수 있는 소식입니다.",
+    "상품 기획과 유통 운영을 함께 점검할 수 있는 참고 소식입니다.",
+    "고객 수요 변화에 맞춘 브랜드 대응 방식을 살펴볼 수 있습니다.",
   ];
   return [...new Set(bullets)]
-    .map((bullet) => qualityBullet(bullet, "브랜드 운영과 유통 전략 관점에서 참고할 만한 소식입니다."))
+    .map((bullet) => qualityBullet(bullet, "브랜드 운영과 유통 전략을 점검할 수 있는 참고 소식입니다."))
     .filter((bullet) => bullet.length >= 18 && bullet.length <= 100)
     .slice(0, 3);
 }
 
-function normalizeSummaryBullets(article) {
+function summaryBulletKey(value = "") {
+  return cleanSummaryText(value)
+    .replace(/[^\p{L}\p{N}]+/gu, "")
+    .toLowerCase();
+}
+
+function isGenericSummaryBullet(value = "") {
+  const text = cleanSummaryText(value);
+  return /관련 흐름이 오늘 주요 기사|브랜드 운영과 상품 기획|유통 채널과 소비 흐름|상품 기획과 채널 운영 관점|고객 수요와 시즌 대응|참고할 만한 업계 신호|참고할 만한 소식입니다/.test(text);
+}
+
+function normalizeSummaryBullets(article, usedSummaryBullets = new Set()) {
   const rawBullets = Array.isArray(article.summaryBullets) ? article.summaryBullets : [];
-  const cleaned = rawBullets
+  const cleaned = [...rawBullets, ...fallbackSummaryBullets(article)]
     .map((bullet) => qualityBullet(bullet, ""))
-    .filter(Boolean)
-    .slice(0, 3);
-  return [...cleaned, ...fallbackSummaryBullets(article)].slice(0, 3);
+    .filter((bullet) => bullet && !isGenericSummaryBullet(bullet));
+  const fallbackPool = fallbackSummaryBullets(article);
+  const selected = [];
+  for (const bullet of [...cleaned, ...fallbackPool]) {
+    const key = summaryBulletKey(bullet);
+    if (!key || usedSummaryBullets.has(key)) continue;
+    selected.push(bullet);
+    usedSummaryBullets.add(key);
+    if (selected.length >= 3) break;
+  }
+  const reserves = [
+    "이 소식은 상품 구성과 고객 접점 운영을 함께 살펴보게 합니다.",
+    "시장 반응을 기준으로 브랜드의 다음 시즌 대응을 점검할 수 있습니다.",
+    "유통 채널과 상품 메시지가 어떻게 연결되는지 확인할 수 있습니다.",
+    "소비자 선택 기준이 상품 기획에 반영되는 방식을 보여줍니다.",
+    "브랜드가 계절 수요를 해석하는 방식을 비교해 볼 수 있습니다.",
+    "오프라인 경험과 온라인 노출 전략의 균형을 살펴볼 수 있습니다.",
+  ];
+  for (const reserve of reserves) {
+    if (selected.length >= 3) break;
+    const key = summaryBulletKey(reserve);
+    if (usedSummaryBullets.has(key)) continue;
+    selected.push(reserve);
+    usedSummaryBullets.add(key);
+  }
+  return selected.slice(0, 3);
 }
 
 function articleKey(value = "") {
