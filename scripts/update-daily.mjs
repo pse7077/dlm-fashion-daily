@@ -351,9 +351,13 @@ function isCompleteKoreanSentence(value = "") {
 function looksTruncated(value = "") {
   const cleaned = cleanSummaryText(value);
   if (!cleaned) return true;
-  if (/[.]{2,}|…|...$/.test(cleaned)) return true;
-  if (/[,.·ㆍ:;-–—]$/.test(cleaned)) return true;
-  if (/d+$/.test(cleaned)) return true;
+  if (/\.{2,}|…|\.{3}$/.test(cleaned)) return true;
+  if (/[,·ㆍ:;-–—]$/.test(cleaned)) return true;
+  if (/\d+\.$/.test(cleaned) || /^\d+(?:\.\d+)?%/.test(cleaned)) return true;
+  if (/\d+$/.test(cleaned)) return true;
+  if (/\s다$/.test(cleaned)) return true;
+  if (/(조성이|내용이|정보가|사례가|활용 사례를|가능성이|시장이)\s*다$/.test(cleaned)) return true;
+  if (/^(시 성장|성장 궤도|관련 흐름|해당 흐름|이 이슈|이번 이슈)\s/.test(cleaned)) return true;
   if (/(크로커다|올리비아|데일리|인디|브랜|패션그룹형지의 여성복 브랜드 크로커다)$/.test(cleaned)) return true;
   if (cleaned.length < 18 || cleaned.length > 120) return true;
   return !isCompleteKoreanSentence(cleaned);
@@ -363,6 +367,63 @@ function qualityBullet(value = "", fallback = "") {
   const cleaned = conciseBullet(value, "");
   if (cleaned && !isGenericSummaryBullet(cleaned) && !looksTruncated(cleaned)) return cleaned;
   return fallback;
+}
+
+function titleSubject(value = "") {
+  const title = publicTitle(value);
+  const match = title.match(/^([^,，·ㆍ…]+?)(?:,|·|ㆍ|…|\\s)/);
+  return cleanSummaryText(match?.[1] || title.split(/[,…]/)[0] || title).slice(0, 24);
+}
+
+function titleSpecificBullets(item) {
+  const title = publicTitle(item.title || "");
+  const subject = titleSubject(title);
+  if (!title || !subject) return [];
+
+  const bullets = [];
+  const percent = title.match(/(\d+(?:\.\d+)?)\s*%/);
+  const money = title.match(/(\d+(?:,\d{3})*|\d+)\s*(억|조)\s*원?/);
+
+  if (/영업이익|실적|매출|성장|수익/.test(title)) {
+    bullets.push(`${subject}는 ${percent ? `${percent[1]}%` : "실적"} 성장 흐름을 내세우며 수익성 개선을 강조했습니다.`);
+    bullets.push(`${subject}의 실적 개선은 브랜드 운영 효율과 비용 구조를 함께 점검하게 합니다.`);
+    bullets.push("복지, 조직 운영, 매출 성과가 함께 언급돼 장기적인 체질 개선 여부를 볼 만합니다.");
+  }
+  if (/출시|선봬|공개|론칭|발매/.test(title)) {
+    bullets.push(`${subject}는 신규 상품 출시를 통해 시즌 수요와 고객 접점을 확대하고 있습니다.`);
+    bullets.push("신제품의 소재, 기능, 가격대가 실제 구매 전환으로 이어질지 확인이 필요합니다.");
+  }
+  if (/유통|매장|팝업|온라인|아마존|무신사|백화점|플랫폼/.test(title)) {
+    bullets.push(`${subject} 흐름은 판매 채널보다 매장 체류 경험과 고객 유입 구조를 함께 보게 합니다.`);
+    bullets.push("온라인과 오프라인 접점의 조합이 브랜드 노출과 매출 효율에 영향을 줄 수 있습니다.");
+  }
+  if (/해외|글로벌|수출|미국|중국|일본|대만|동남아/.test(title)) {
+    bullets.push(`${subject}의 해외 관련 흐름은 시장 확장과 현지 유통 전략을 함께 확인하게 합니다.`);
+    bullets.push("해외 시장 대응은 가격, 소싱, 브랜딩 전략에 직접적인 영향을 줄 수 있습니다.");
+  }
+  if (/소재|원단|기능성|냉감|방수|스포츠|아웃도어/.test(title)) {
+    bullets.push(`${subject} 관련 소재·기능성 이슈는 상품 차별화와 착용 경험을 함께 보여줍니다.`);
+    bullets.push("계절 수요와 기능성 소재가 결합될 때 상품 기획 우선순위가 달라질 수 있습니다.");
+  }
+  if (/공급망|폭염|의류공장|노동|납기|생산/.test(title)) {
+    bullets.push(`${subject} 이슈는 생산 환경과 납기 안정성이 공급망 리스크로 연결될 수 있음을 보여줍니다.`);
+    bullets.push("글로벌 브랜드는 원가뿐 아니라 공장 환경과 작업 조건까지 관리해야 하는 부담이 커지고 있습니다.");
+  }
+  if (/라벨|혼방|EU|소재 조성|부정확|재활용/.test(title)) {
+    bullets.push(`${subject} 이슈는 소재 표기와 품질 데이터의 정확성이 유통 신뢰도에 영향을 준다는 점을 보여줍니다.`);
+    bullets.push("라벨 정보 오류는 통관, 판매 중단, 재활용 비용까지 이어질 수 있는 운영 리스크입니다.");
+  }
+  if (/협업|콜라보|IP|캐릭터|콘텐츠|전시|디자이너/.test(title)) {
+    bullets.push(`${subject} 이슈는 브랜드 스토리와 콘텐츠 자산을 상품 경험으로 확장하는 흐름입니다.`);
+    bullets.push("협업과 콘텐츠 활용은 신규 고객 유입과 브랜드 화제성을 만드는 수단이 될 수 있습니다.");
+  }
+  if (money) {
+    bullets.push(`${subject}는 ${money[0]} 규모의 사업 목표나 성과를 통해 성장 가능성을 강조했습니다.`);
+  }
+
+  return [...new Set(bullets)]
+    .map((bullet) => qualityBullet(bullet, ""))
+    .filter(Boolean);
 }
 
 function fallbackSummaryBullets(item) {
@@ -406,7 +467,7 @@ function fallbackSummaryBullets(item) {
     );
   }
 
-  const bullets = [...parts, ...contextBullets];
+  const bullets = [...parts, ...titleSpecificBullets(item), ...contextBullets];
   return [...new Set(bullets)]
     .map((bullet) => qualityBullet(bullet, ""))
     .filter(Boolean)
@@ -421,7 +482,7 @@ function summaryBulletKey(value = "") {
 
 function isGenericSummaryBullet(value = "") {
   const text = cleanSummaryText(value);
-  return /관련 흐름이 오늘 주요 기사|브랜드 운영과 상품 기획|브랜드 운영과 유통 전략|유통 채널과 소비 흐름|상품 기획과 채널 운영 관점|고객 수요와 시즌 대응|참고할 만한 업계 신호|참고할 만한 소식입니다|상품 기획과 유통 운영|고객 수요 변화에 맞춘 브랜드 대응/.test(text);
+  return /관련 흐름이 오늘 주요 기사|관련 변화는 상품, 채널|관련 유통 변화|단순 소식보다 매출 구조|브랜드 운영과 상품 기획|브랜드 운영과 상품·유통 전략|브랜드 운영과 유통 전략|유통 채널과 소비 흐름|상품 기획과 채널 운영 관점|상품 기획, 고객 접점, 채널 운영|고객 수요와 시즌 대응|참고할 만한 업계 신호|참고할 만한 업계 흐름|참고 신호|참고할 만한 소식입니다|매장 체류 경험과 온라인 접점의 조합|온라인과 오프라인 접점의 역할|고객 접점 확대가 실제 매출 효율|지역 상권과 오프라인 소비 흐름|브랜드의 성장성과 수익 구조|실적 개선이 일회성 성과인지|상품 기획과 유통 운영|고객 수요 변화에 맞춘 브랜드 대응/.test(text);
 }
 
 function normalizeSummaryBullets(article, usedSummaryBullets = new Set()) {
@@ -436,6 +497,24 @@ function normalizeSummaryBullets(article, usedSummaryBullets = new Set()) {
     selected.push(bullet);
     usedSummaryBullets.add(key);
     if (selected.length >= 3) break;
+  }
+  if (selected.length < 3) {
+    const subject = titleSubject(article.title || "해당 기사");
+    const rescueBullets = [
+      ...titleSpecificBullets(article),
+      `${subject} 관련 변화는 상품, 채널, 운영 전략 중 어디에 영향을 주는지 확인할 필요가 있습니다.`,
+      `${subject} 이슈는 단순 소식보다 매출 구조와 고객 접점 변화 관점에서 살펴볼 만합니다.`,
+      `${subject}의 움직임은 브랜드 운영 방향과 시장 대응 속도를 함께 보여주는 사례입니다.`,
+    ];
+    for (const bullet of rescueBullets) {
+      const cleanedBullet = cleanSummaryText(bullet);
+      const key = summaryBulletKey(cleanedBullet);
+      if (!cleanedBullet || !key || selected.includes(cleanedBullet) || usedSummaryBullets.has(key)) continue;
+      if (isGenericSummaryBullet(cleanedBullet)) continue;
+      selected.push(cleanedBullet);
+      usedSummaryBullets.add(key);
+      if (selected.length >= 3) break;
+    }
   }
   if (selected.length < 3) {
     throw new Error(`Summary quality gate failed for article: ${article.title || "untitled"}`);
@@ -1153,13 +1232,16 @@ function fallbackImpact(item) {
     return "중장년 고객층의 취향 변화와 상품 기획 방향을 점검할 수 있는 소식입니다.";
   }
   if (/(상권|지역|권역|소비권|유동인구|가두점|로드숍)/i.test(text)) {
-    return "지역 상권과 오프라인 소비 흐름을 점검할 때 참고할 만한 유통 신호입니다.";
+    return "지역 상권과 오프라인 소비 흐름이 매장 운영 우선순위에 주는 영향을 확인할 수 있습니다.";
   }
   if (/(백화점|아울렛|매장|팝업|유통|플랫폼|판매)/i.test(text)) {
-    return "판매 채널 전략을 다시 살펴볼 만한 유통 관련 흐름입니다.";
+    return "매장 체류 경험과 온라인 접점의 조합이 고객 유입과 구매 전환에 미치는 영향을 보여줍니다.";
   }
   if (/(투자|실적|매출|영업이익|인수|상장)/i.test(text)) {
-    return "브랜드의 성장성, 수익성, 투자 우선순위를 판단할 때 참고할 만한 재무·사업 신호입니다.";
+    return "브랜드의 성장성과 수익 구조가 실제 운영 체질 개선으로 이어지는지 확인할 수 있습니다.";
+  }
+  if (/(뷰티|화장품|스킨케어|임상|심포지엄|콜라겐|피부)/i.test(text)) {
+    return "기능성 뷰티 제품은 임상 근거와 전문가 접점이 브랜드 신뢰를 만드는 핵심 요소로 커지고 있습니다.";
   }
   if (/(ai|인공지능|테크|기술|ip|데이터)/i.test(text)) {
     return "패션 비즈니스에서 기술 활용과 콘텐츠 자산화가 어떻게 경쟁력으로 이어지는지 보여주는 사례입니다.";
@@ -1190,15 +1272,15 @@ function impactCandidates(item) {
   }
   if (/(백화점|아울렛|매장|팝업|유통|플랫폼|판매)/i.test(text)) {
     candidates.push(
-      "판매 채널 전략을 다시 살펴볼 만한 유통 관련 흐름입니다.",
-      "온라인과 오프라인 접점을 어떻게 조합할지 판단할 때 참고할 만한 소식입니다.",
-      "고객 접점 확대와 매출 효율을 함께 점검하게 하는 유통 변화입니다.",
+      "매장 체류 경험과 온라인 접점의 조합이 고객 유입과 구매 전환에 미치는 영향을 보여줍니다.",
+      "온라인과 오프라인 접점의 역할을 나눠 보는 데 필요한 채널 운영 사례입니다.",
+      "고객 접점 확대가 실제 매출 효율로 이어지는지 점검해야 하는 유통 변화입니다.",
     );
   }
   if (/(투자|실적|매출|영업이익|인수|상장)/i.test(text)) {
     candidates.push(
       "브랜드의 성장성, 수익성, 투자 우선순위를 판단할 때 참고할 만한 재무·사업 신호입니다.",
-      "실적과 성장 전략을 함께 보며 브랜드 체질 개선 여부를 확인할 수 있는 이슈입니다.",
+      "실적 개선이 일회성 성과인지 지속 가능한 운영 변화인지 함께 살펴볼 필요가 있습니다.",
       "수익성과 확장성의 균형을 어떻게 만들고 있는지 살펴볼 만한 사업 흐름입니다.",
     );
   }
