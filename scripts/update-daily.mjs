@@ -358,6 +358,7 @@ function looksTruncated(value = "") {
   if (/\s다$/.test(cleaned)) return true;
   if (/(조성이|내용이|정보가|사례가|활용 사례를|가능성이|시장이)\s*다$/.test(cleaned)) return true;
   if (/^(시 성장|성장 궤도|관련 흐름|해당 흐름|이 이슈|이번 이슈)\s/.test(cleaned)) return true;
+  if (/^(스는|업은|사는)\s/.test(cleaned)) return true;
   if (/(크로커다|올리비아|데일리|인디|브랜|패션그룹형지의 여성복 브랜드 크로커다)$/.test(cleaned)) return true;
   if (cleaned.length < 18 || cleaned.length > 120) return true;
   return !isCompleteKoreanSentence(cleaned);
@@ -416,6 +417,16 @@ function titleSpecificBullets(item) {
   if (/협업|콜라보|IP|캐릭터|콘텐츠|전시|디자이너/.test(title)) {
     bullets.push(`${subject} 이슈는 브랜드 스토리와 콘텐츠 자산을 상품 경험으로 확장하는 흐름입니다.`);
     bullets.push("협업과 콘텐츠 활용은 신규 고객 유입과 브랜드 화제성을 만드는 수단이 될 수 있습니다.");
+  }
+  if (/헤리티지|다음세대|장광효|인터뷰|아카이브|전통|세대/.test(title)) {
+    bullets.push(`${subject} 이슈는 브랜드가 축적한 정체성을 다음 고객층에게 전달하는 방식과 연결됩니다.`);
+    bullets.push("헤리티지 자산을 상품, 전시, 콘텐츠로 확장할 때 고객 접점 설계가 중요합니다.");
+    bullets.push("세대 전환 관점에서 브랜드 스토리와 실제 상품 경험이 일관되게 이어지는지 볼 필요가 있습니다.");
+  }
+  if (/장인정신|명품|유럽|마켓|트로아|럭셔리/.test(title)) {
+    bullets.push(`${subject}는 장인정신과 헤리티지를 해외 시장 진출의 차별화 요소로 내세우고 있습니다.`);
+    bullets.push("유럽 시장에서 수공예 기반 브랜드가 어떤 고객층과 유통 접점을 확보하는지 볼 필요가 있습니다.");
+    bullets.push("브랜드 스토리, 생산 방식, 현지 채널이 함께 맞물려야 지속적인 해외 확장이 가능합니다.");
   }
   if (money) {
     bullets.push(`${subject}는 ${money[0]} 규모의 사업 목표나 성과를 통해 성장 가능성을 강조했습니다.`);
@@ -505,6 +516,9 @@ function normalizeSummaryBullets(article, usedSummaryBullets = new Set()) {
       `${subject} 관련 변화는 상품, 채널, 운영 전략 중 어디에 영향을 주는지 확인할 필요가 있습니다.`,
       `${subject} 이슈는 단순 소식보다 매출 구조와 고객 접점 변화 관점에서 살펴볼 만합니다.`,
       `${subject}의 움직임은 브랜드 운영 방향과 시장 대응 속도를 함께 보여주는 사례입니다.`,
+      `${subject}의 핵심은 브랜드가 어떤 고객층과 접점을 넓히려 하는지 확인하는 데 있습니다.`,
+      `${subject} 흐름은 상품 기획, 유통 채널, 브랜드 스토리 중 어디에 무게를 두는지 보여줍니다.`,
+      `${subject} 사례는 단기 화제성보다 실제 판매와 고객 반응으로 이어지는지 점검해야 합니다.`,
     ];
     for (const bullet of rescueBullets) {
       const cleanedBullet = cleanSummaryText(bullet);
@@ -1249,7 +1263,8 @@ function fallbackImpact(item) {
   if (/(관세|규제|정부|정책|공급망)/i.test(text)) {
     return "원가, 생산, 수입 구조에 영향을 줄 수 있어 공급망 리스크 관점에서 확인이 필요한 이슈입니다.";
   }
-  return "브랜드 운영과 상품·유통 전략을 점검할 때 참고할 만한 업계 흐름입니다.";
+  const subject = titleSubject(item.title || "해당 기사");
+  return `${subject} 흐름은 브랜드 정체성, 고객 접점, 상품 운영 중 어디에 영향을 주는지 점검할 필요가 있습니다.`;
 }
 
 function impactCandidates(item) {
@@ -1299,10 +1314,11 @@ function impactCandidates(item) {
     );
   }
 
+  const subject = titleSubject(item.title || "해당 기사");
   candidates.push(
-    "브랜드 운영과 상품·유통 전략을 점검할 때 참고할 만한 업계 흐름입니다.",
-    "상품 기획, 고객 접점, 채널 운영을 함께 살펴보게 하는 참고 신호입니다.",
-    "단발 이슈보다 브랜드 방향성과 시장 대응력을 함께 확인할 만한 내용입니다.",
+    `${subject} 흐름은 브랜드 정체성, 고객 접점, 상품 운영 중 어디에 영향을 주는지 점검할 필요가 있습니다.`,
+    `${subject} 사례는 단기 화제성보다 실제 판매와 고객 반응으로 이어지는지 확인해야 합니다.`,
+    `${subject} 이슈는 상품 기획과 채널 운영의 우선순위를 다시 보게 하는 신호입니다.`,
   );
 
   return [...new Set(candidates.map(cleanSummaryText).filter(Boolean))];
@@ -1310,7 +1326,9 @@ function impactCandidates(item) {
 
 function uniqueImpactForArticle(article, usedImpacts) {
   const current = qualityBullet(article.impact, "");
-  const options = [current, ...impactCandidates(article)].filter(Boolean);
+  const options = [current, ...impactCandidates(article)].filter(
+    (option) => option && !isGenericSummaryBullet(option) && !looksTruncated(option),
+  );
   for (const option of options) {
     const key = option.replace(/\s+/g, " ").trim();
     if (!usedImpacts.has(key)) {
