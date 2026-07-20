@@ -45,19 +45,43 @@ jobs:
 
       - name: Commit archive update
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_MODEL: openai/gpt-4.1-mini
           TARGET_DATE: ${{ inputs.target_date }}
         run: |
-          echo "DLM workflow v12: scheduled at 07:10 KST"
+          echo "DLM workflow v13: scheduled at 07:10 KST with push conflict defense"
+          target_date="${TARGET_DATE:-$(TZ=Asia/Seoul date +%F)}"
           if git diff --quiet && git diff --cached --quiet && [ -z "$(git ls-files --others --exclude-standard)" ]; then
             echo "No changes to commit."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          if git diff --cached --quiet; then
-            echo "No changes to commit after syncing."
+
+          commit_and_push() {
+            git add -A
+            if git diff --cached --quiet; then
+              echo "No changes to commit."
+              return 0
+            fi
+            git commit -m "Update Fashion Daily for ${target_date}"
+            git push origin HEAD:main
+          }
+
+          if commit_and_push; then
             exit 0
           fi
-          git commit -m "Update Fashion Daily for ${TARGET_DATE:-$(TZ=Asia/Seoul date +%F)}"
-          git push
+
+          echo "Initial push was rejected. Syncing latest main and regenerating once."
+          git fetch origin main
+          git reset --hard origin/main
+          git clean -fd
+
+          node scripts/update-daily.mjs
+
+          if git diff --quiet && git diff --cached --quiet && [ -z "$(git ls-files --others --exclude-standard)" ]; then
+            echo "No changes after syncing latest main."
+            exit 0
+          fi
+
+          commit_and_push
