@@ -430,6 +430,21 @@ function titleSpecificBullets(item) {
     bullets.push(`${subject} 이슈는 브랜드 스토리와 콘텐츠 자산을 상품 경험으로 확장하는 흐름입니다.`);
     bullets.push("협업과 콘텐츠 활용은 신규 고객 유입과 브랜드 화제성을 만드는 수단이 될 수 있습니다.");
   }
+  if (/정국|셀럽|착용|커스텀|발렌시아가|무대|공연/.test(title)) {
+    bullets.push("셀럽 착용 이슈는 무대 노출이 럭셔리 브랜드의 이미지 확산으로 이어지는 사례입니다.");
+    bullets.push("공연 의상 협업은 브랜드가 팬덤과 글로벌 고객 접점을 넓히는 방식으로 활용됩니다.");
+    bullets.push("커스텀 룩은 상품 판매보다 브랜드 화제성과 문화적 노출을 만드는 데 의미가 있습니다.");
+  }
+  if (/혁신\s*프리미어|정부|선정|지원사업|스타트업|투자|육성/.test(title)) {
+    bullets.push("정부 지원사업 선정은 기업의 성장성과 사업 확장 가능성을 외부에서 인정받은 신호입니다.");
+    bullets.push("플랫폼 기반 브랜드는 기술 개발과 운영 역량을 함께 강화할 기회를 얻을 수 있습니다.");
+    bullets.push("정책 지원은 단기 매출보다 중장기 투자와 서비스 고도화 관점에서 볼 필요가 있습니다.");
+  }
+  if (/lego|레고|브릭|클림트|the kiss|아트|art/i.test(title)) {
+    bullets.push("아트 IP 상품은 예술 콘텐츠를 수집형 라이프스타일 제품으로 확장하는 사례입니다.");
+    bullets.push("브릭 기반 재현 상품은 팬덤과 선물 수요를 동시에 겨냥하는 콘텐츠 전략으로 볼 수 있습니다.");
+    bullets.push("문화 자산을 상품화할 때는 원작 인지도와 제품 완성도가 구매 동기를 좌우합니다.");
+  }
   if (/스포츠웨어|아디다스|나이키|월드컵|미디어|MIV|런치메트릭스/.test(title)) {
     bullets.push(`${subject} 이슈는 스포츠 이벤트가 브랜드 미디어 영향력과 판매 경쟁으로 이어지는 흐름입니다.`);
     bullets.push("스타 선수와 대형 스포츠 이벤트가 브랜드 선호도와 제품 구매 의향에 미치는 영향을 볼 필요가 있습니다.");
@@ -513,37 +528,55 @@ function isGenericSummaryBullet(value = "") {
   return /관련 흐름이 오늘 주요 기사|관련 변화는 상품, 채널|관련 유통 변화|단순 소식보다 매출 구조|브랜드 운영과 상품 기획|브랜드 운영과 상품·유통 전략|브랜드 운영과 유통 전략|유통 채널과 소비 흐름|상품 기획과 채널 운영 관점|상품 기획, 고객 접점, 채널 운영|고객 수요와 시즌 대응|참고할 만한 업계 신호|참고할 만한 업계 흐름|참고 신호|참고할 만한 소식입니다|매장 체류 경험과 온라인 접점의 조합|온라인과 오프라인 접점의 역할|고객 접점 확대가 실제 매출 효율|지역 상권과 오프라인 소비 흐름|브랜드의 성장성과 수익 구조|실적 개선이 일회성 성과인지|상품 기획과 유통 운영|고객 수요 변화에 맞춘 브랜드 대응/.test(text);
 }
 
+function leadingSummarySubjectKey(value = "") {
+  const text = cleanSummaryText(value);
+  const match = text.match(/^(.{2,32}?)(?:의|은|는|\s흐름|\s움직임|\s핵심|\s이슈|\s관련)\s/);
+  if (!match) return "";
+  const subject = match[1]
+    .replace(/[^\p{L}\p{N}]+/gu, "")
+    .toLowerCase();
+  if (subject.length < 2) return "";
+  return subject;
+}
+
 function normalizeSummaryBullets(article, usedSummaryBullets = new Set()) {
   const rawBullets = Array.isArray(article.summaryBullets) ? article.summaryBullets : [];
   const cleaned = [...rawBullets, ...fallbackSummaryBullets(article)]
     .map((bullet) => qualityBullet(bullet, ""))
     .filter((bullet) => bullet && !isGenericSummaryBullet(bullet) && !looksTruncated(bullet));
   const selected = [];
+  const usedLocalSubjects = new Set();
   for (const bullet of cleaned) {
     const key = summaryBulletKey(bullet);
+    const subjectKey = leadingSummarySubjectKey(bullet);
     if (!key || usedSummaryBullets.has(key)) continue;
+    if (subjectKey && usedLocalSubjects.has(subjectKey)) continue;
     selected.push(bullet);
     usedSummaryBullets.add(key);
+    if (subjectKey) usedLocalSubjects.add(subjectKey);
     if (selected.length >= 3) break;
   }
   if (selected.length < 3) {
     const subject = titleSubject(article.title || "해당 기사");
     const rescueBullets = [
       ...titleSpecificBullets(article),
+      "이 이슈는 단기 화제성보다 실제 판매와 고객 반응으로 이어지는지 점검해야 합니다.",
+      "브랜드는 고객 접점 확대와 상품 경험 설계가 함께 맞물릴 때 효과를 키울 수 있습니다.",
+      "시장 대응 속도와 운영 실행력이 실제 성과로 이어지는지 후속 흐름을 볼 필요가 있습니다.",
+      "상품 기획, 유통 채널, 브랜드 스토리 중 어디에 무게를 두는지 확인해야 합니다.",
+      "기사에서 확인되는 변화는 고객층 확장과 브랜드 운영 방향을 함께 보여줍니다.",
       `${subject} 관련 변화는 상품, 채널, 운영 전략 중 어디에 영향을 주는지 확인할 필요가 있습니다.`,
-      `${subject} 이슈는 단순 소식보다 매출 구조와 고객 접점 변화 관점에서 살펴볼 만합니다.`,
-      `${subject}의 움직임은 브랜드 운영 방향과 시장 대응 속도를 함께 보여주는 사례입니다.`,
-      `${subject}의 핵심은 브랜드가 어떤 고객층과 접점을 넓히려 하는지 확인하는 데 있습니다.`,
-      `${subject} 흐름은 상품 기획, 유통 채널, 브랜드 스토리 중 어디에 무게를 두는지 보여줍니다.`,
-      `${subject} 사례는 단기 화제성보다 실제 판매와 고객 반응으로 이어지는지 점검해야 합니다.`,
     ];
     for (const bullet of rescueBullets) {
       const cleanedBullet = cleanSummaryText(bullet);
       const key = summaryBulletKey(cleanedBullet);
+      const subjectKey = leadingSummarySubjectKey(cleanedBullet);
       if (!cleanedBullet || !key || selected.includes(cleanedBullet) || usedSummaryBullets.has(key)) continue;
+      if (subjectKey && usedLocalSubjects.has(subjectKey)) continue;
       if (isGenericSummaryBullet(cleanedBullet)) continue;
       selected.push(cleanedBullet);
       usedSummaryBullets.add(key);
+      if (subjectKey) usedLocalSubjects.add(subjectKey);
       if (selected.length >= 3) break;
     }
   }
